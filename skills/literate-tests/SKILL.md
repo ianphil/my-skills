@@ -1,14 +1,15 @@
 ---
 name: literate-tests
 description: >
-  Generate literate test suites as MARKDOWN FILES with a custom test runner.
-  NOT pytest/jest/etc. The markdown IS the test format. Use when creating 
-  specification-as-tests for agent-driven development. Creates two artifacts:
-  (1) .md test files with inline assertions, (2) a test runner that parses them.
+  This skill should be used when the user asks to "create literate tests",
+  "generate markdown tests", "specification-as-tests", "TDD with markdown",
+  "agent-driven testing", or mentions test suites where markdown IS the test format.
+  NOT for pytest/jest/unittest. Creates .md test files with inline assertions
+  and uses a bundled custom test runner.
 license: MIT
 metadata:
   author: Ian
-  version: "2.0"
+  version: "2.1"
 ---
 
 # Literate Test Suite Generator
@@ -19,7 +20,7 @@ Create a test suite for **[DOMAIN]** that an agent can run autonomously.
 
 > **CRITICAL:** This is NOT pytest/jest/unittest/etc. This creates a CUSTOM test format.
 
-You will generate **two artifacts**:
+Generate **two artifacts**:
 
 ### 1. Markdown Test Files (`tests/<feature>.md`)
 
@@ -46,17 +47,22 @@ do_thing(None)  # error: [null-input]
 
 The markdown file IS the test. Code blocks contain executable code. Comments are assertions.
 
-### 2. Test Runner (`run_tests.py` or equivalent)
+### 2. Test Runner (`tests/run_tests.py`)
 
-A script that:
-1. Parses markdown files
-2. Extracts code blocks
-3. Executes them
-4. Validates `# expect:` and `# error:` assertions
-5. Reports pass/fail
+Copy the bundled runner from this skill:
 
-**Do NOT use pytest, jest, or any standard test framework for the runner itself.**
-The runner is custom code that understands this markdown format.
+```bash
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/run_tests.py
+```
+
+The bundled runner:
+1. Parses markdown files for TOML frontmatter
+2. Extracts `py` and `sh` code blocks
+3. Validates `# expect:` and `# error:` assertions
+4. Supports matchers: `approx()`, `contains()`
+5. Reports pass/fail with colored output
+
+**Do NOT use pytest, jest, or any standard test framework.**
 
 ---
 
@@ -82,9 +88,9 @@ This pattern enabled Simon Willison to port an entire HTML5 parser in 4.5 hours�
 project/
 ├── src/
 │   └── <module>.py           # Code under test
-├── tests/
-│   └── <feature>.md          # Markdown test files (NOT .py!)
-└── run_tests.py              # Custom test runner
+└── tests/
+    ├── <feature>.md          # Markdown test files (NOT .py!)
+    └── run_tests.py          # Bundled test runner (copied from skill)
 ```
 
 ---
@@ -185,40 +191,23 @@ mycommand --bad-flag
 
 ---
 
-## Test Runner Requirements
+## Using the Bundled Runner
 
-The runner you generate must:
+The bundled `scripts/run_tests.py` handles all runner functionality. To use:
 
-1. **Parse TOML frontmatter** — Extract module, imports, isolation mode
-2. **Extract code blocks** — Find ```py (or language) blocks
-3. **Parse assertions** — Recognize `# expect:` and `# error:` comments
-4. **Execute code** — Run each block with proper isolation
-5. **Validate assertions** — Compare results, catch exceptions, check error codes
-6. **Report results** — Show pass/fail with helpful messages
+```bash
+# Copy to project
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/run_tests.py
 
-### Runner Skeleton (Python)
-
-```python
-#!/usr/bin/env python3
-"""Literate Test Runner - parses markdown, executes code blocks, validates assertions."""
-
-def parse_frontmatter(content: str) -> dict:
-    """Extract TOML config from start of file."""
-    ...
-
-def extract_tests(content: str) -> list[TestCase]:
-    """Find code blocks and their assertions."""
-    ...
-
-def run_test(test: TestCase, context: dict) -> TestResult:
-    """Execute code block, validate assertions."""
-    ...
-
-def main():
-    for md_file in Path("tests").glob("*.md"):
-        # Parse, run, report
-        ...
+# Run tests
+python tests/run_tests.py
 ```
+
+The runner automatically:
+- Finds all `.md` files in `tests/`
+- Parses TOML frontmatter for module imports
+- Executes Python and shell code blocks
+- Validates assertions and reports results
 
 ---
 
@@ -298,10 +287,10 @@ celsius_to_fahrenheit(-300)  # error: [below-absolute-zero]
 
 ## Checklist Before Generating
 
-When asked to create literate tests, verify:
+When asked to create literate tests:
 
+- [ ] Copy bundled runner: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/`
 - [ ] Create `.md` files in `tests/`, NOT `.py` test files
-- [ ] Create a custom `run_tests.py` runner, NOT pytest
 - [ ] Include TOML frontmatter at top of each test file
 - [ ] Include error code index before tests
 - [ ] Use `# expect:` and `# error:` assertion syntax
