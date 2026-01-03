@@ -16,7 +16,8 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./skills/astral-uv"
+        "./skills/astral-uv",
+        "./skills/literate-tests"
       ]
     }
   ]
