@@ -1,324 +1,327 @@
 ---
 name: literate-tests
 description: >
-  Generate literate test suites that serve as both documentation and executable
-  assertions. Use when creating test suites for agent-driven development, writing
-  specification-as-tests, or building autonomous testing workflows. Triggers on:
-  test generation requests, specification writing, agent-executable test design.
+  Generate literate test suites as MARKDOWN FILES with a custom test runner.
+  NOT pytest/jest/etc. The markdown IS the test format. Use when creating 
+  specification-as-tests for agent-driven development. Creates two artifacts:
+  (1) .md test files with inline assertions, (2) a test runner that parses them.
 license: MIT
 metadata:
   author: Ian
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Literate Test Suite Generator
 
 Create a test suite for **[DOMAIN]** that an agent can run autonomously.
 
-## Why This Format
+## What This Pattern Produces
 
-Tests are the oracle. An agent runs them, sees failures, fixes code, repeats. The test file is both:
-- **Documentation** humans can read
-- **Executable assertions** agents can verify against
+> **CRITICAL:** This is NOT pytest/jest/unittest/etc. This creates a CUSTOM test format.
 
----
+You will generate **two artifacts**:
 
-## Runner Contract
-
-The test runner must behave predictably. Specify these for your environment:
-
-| Setting | Options | Your Choice |
-|---------|---------|-------------|
-| **Isolation** | `per-block` (fresh state each block) / `per-file` (shared within file) | [CHOICE] |
-| **Execution order** | Top-to-bottom within each file | (fixed) |
-| **Bootstrapping** | How code-under-test is loaded | [MODULE/IMPORT/ENTRYPOINT] |
-| **Stream capture** | stdout/stderr captured per block | (fixed) |
-| **Determinism** | Fixed random seed, no wall-clock dependencies | (required) |
-
-**Determinism requirements:**
-- No network calls unless explicitly mocked
-- Time must be injected/frozen if tests depend on it
-- Locale and timezone fixed (e.g., UTC, en-US)
-
-**Bootstrapping example:**
-```toml
-# Frontmatter MUST be the first thing in the file (no blank lines before)
-module = "mypackage.validator"
-import = ["validate", "normalize", "ValidationError"]
-```
-
-### Block Semantics
-
-- A code block may contain **multiple statements**
-- Each block must contain **at least one assertion** (`expect:` or `error:`)
-- For `error:` assertions, the failing statement must be the **last statement** in the block
-- In `per-block` isolation: variables defined in a block do not carry to the next block
-- In `per-file` isolation: state is shared within the file, blocks execute top-to-bottom
-
-### Setup Blocks (Optional)
-
-A `## Setup` section at the start of a file or group runs before each test in that scope:
+### 1. Markdown Test Files (`tests/<feature>.md`)
 
 ```markdown
-## Setup
+# Feature Name
+
+Prose explaining what this tests and why.
+
+## Test Group
+
+### Specific Behavior
 
 \`\`\`py
-from mymodule import Client
-client = Client(test_mode=True)
+result = do_thing("input")
+result.value  # expect: 42
 \`\`\`
 
-## Tests That Use Client
+### Error Case  
 
 \`\`\`py
-client.ping()  # expect: "pong"
+do_thing(None)  # error: [null-input]
 \`\`\`
 ```
 
-Setup blocks contain no assertions. Keep them minimal—prefer stateless tests.
+The markdown file IS the test. Code blocks contain executable code. Comments are assertions.
+
+### 2. Test Runner (`run_tests.py` or equivalent)
+
+A script that:
+1. Parses markdown files
+2. Extracts code blocks
+3. Executes them
+4. Validates `# expect:` and `# error:` assertions
+5. Reports pass/fail
+
+**Do NOT use pytest, jest, or any standard test framework for the runner itself.**
+The runner is custom code that understands this markdown format.
 
 ---
 
-## Assertion Syntax (Canonical)
+## Why This Format
 
-Assertions are encoded in comments using the target language's comment prefix.
+Tests are the oracle for agent-driven development:
+1. Agent runs `python run_tests.py`
+2. Sees which assertions fail
+3. Fixes the code
+4. Repeats until green
+
+The test file is both:
+- **Documentation** humans can read (it's markdown!)
+- **Executable specification** agents verify against
+
+This pattern enabled Simon Willison to port an entire HTML5 parser in 4.5 hours—the agent ran 9,200 tests autonomously.
+
+---
+
+## File Structure
+
+```
+project/
+├── src/
+│   └── <module>.py           # Code under test
+├── tests/
+│   └── <feature>.md          # Markdown test files (NOT .py!)
+└── run_tests.py              # Custom test runner
+```
+
+---
+
+## Markdown Test File Format
+
+### Frontmatter (Required)
+
+Must be the FIRST thing in the file:
+
+```toml
+# Test Configuration
+module = "mypackage.validator"
+import = ["validate", "normalize", "ValidationError"]
+isolation = "per-block"
+```
+
+### Error Code Index (Required)
+
+List ALL error codes at the top, before any tests:
+
+```markdown
+**Error codes:**
+- `[empty-input]` — User provided empty string
+- `[null-input]` — User provided null/None
+- `[invalid-format]` — String doesn't match expected pattern
+```
+
+### Test Sections
+
+Headers create test groups. Prose explains intent. Code blocks are tests:
+
+```markdown
+## Input Validation
+
+Users paste data from spreadsheets which may contain invisible whitespace.
+The validator normalizes input before checking length.
+
+### Accepts Valid Input
+
+\`\`\`py
+validate("hello")  # expect: True
+\`\`\`
+
+### Rejects Empty String
+
+Empty means "user submitted nothing" — distinct from whitespace-only:
+
+\`\`\`py
+validate("")  # error: [empty-input]
+\`\`\`
+```
+
+---
+
+## Assertion Syntax
 
 ### Value Assertions
 
-```
-<expr>  <comment> expect: <value>
+```py
+expression  # expect: <value>
 ```
 
-The asserted line must be an **evaluable expression** (not a statement like `x = 1`). All lines before the assertion in the same block run as setup.
-
-**Regular comments** (not starting with `expect:` or `error:`) are allowed and ignored by the runner:
+The line before `# expect:` must be an **evaluable expression**, not a statement.
 
 ```py
-# This is just a comment explaining the test
-result = calculate()  # This too
+# Setup lines run first
+result = calculate(10)
+# This line is evaluated and compared
 result.value  # expect: 42
 ```
 
-Where `<value>` is one of:
-- **Primitives:** `42`, `3.14`, `true`, `false`, `null`/`None`/`nil`
-- **Strings:** `"hello"` (double-quoted)
-- **Language expressions:** `ErrorKind::InvalidInput`, `StatusCode.OK`
-
-**Comparison is structural equality** (deep equals), not reference identity.
-
-### Equality Rules
-
-- **Primitives:** exact equality
-- **Floats:** use `approx()` for tolerance; `NaN` requires explicit handling
-- **Objects/structs:** compare by JSON-serializable shape or explicit projection
-- **Collections:** order matters for lists/arrays; order ignored for sets; keys compared for maps/dicts
-
 ### Error Assertions
 
+```py
+statement  # error: [code]
+statement  # error: "message substring"  
+statement  # error: [code] "message substring"
 ```
-<statement>  <comment> error: [code]
-<statement>  <comment> error: "text"
-<statement>  <comment> error: [code] "text"
-```
-
-The runner executes the statement, expects it to fail, and matches:
-- `[code]` — error's stable identifier (see Error Identity below)
-- `"text"` — substring match against error message
-
-### Stream/Exit Assertions (CLI/Shell)
-
-```sh
-some_command --flag
-# exit: 1
-# stdout: "expected output"
-# stderr: "error message"
-```
-
-Stream assertions support:
-- **Exact match:** `# stdout: "exact text"`
-- **Contains:** `# stdout: contains("substring")`
-- **Regex:** `# stderr: matches(/pattern/)`
 
 ### Matchers
 
-| Matcher | Meaning |
-|---------|---------|
-| `approx(3.14159, tol=0.0001)` | Floating-point within tolerance |
-| `contains("substring")` | String/output contains text |
-| `matches(/regex/)` | String matches regular expression |
+For non-exact comparisons:
 
-**Examples:**
+```py
+pi_value()  # expect: approx(3.14159, tol=0.0001)
+output      # expect: contains("success")
+text        # expect: matches(/^Error: \d+/)
 ```
-pi_value()      // expect: approx(3.14159, tol=0.0001)
-error.message   // expect: contains("invalid")
-output          // expect: matches(/^Error: .*line \d+/)
+
+### CLI/Shell Tests
+
+```sh
+mycommand --bad-flag
+# exit: 1
+# stderr: contains("[invalid-flag]")
+```
+
+---
+
+## Test Runner Requirements
+
+The runner you generate must:
+
+1. **Parse TOML frontmatter** — Extract module, imports, isolation mode
+2. **Extract code blocks** — Find ```py (or language) blocks
+3. **Parse assertions** — Recognize `# expect:` and `# error:` comments
+4. **Execute code** — Run each block with proper isolation
+5. **Validate assertions** — Compare results, catch exceptions, check error codes
+6. **Report results** — Show pass/fail with helpful messages
+
+### Runner Skeleton (Python)
+
+```python
+#!/usr/bin/env python3
+"""Literate Test Runner - parses markdown, executes code blocks, validates assertions."""
+
+def parse_frontmatter(content: str) -> dict:
+    """Extract TOML config from start of file."""
+    ...
+
+def extract_tests(content: str) -> list[TestCase]:
+    """Find code blocks and their assertions."""
+    ...
+
+def run_test(test: TestCase, context: dict) -> TestResult:
+    """Execute code block, validate assertions."""
+    ...
+
+def main():
+    for md_file in Path("tests").glob("*.md"):
+        # Parse, run, report
+        ...
 ```
 
 ---
 
 ## Error Identity (Critical)
 
-Every error the system produces must have a **stable identifier** the runner can match against. This is non-negotiable—without it, agents will "fix" tests by changing error messages.
+Every error must have a **stable code** the runner can match:
 
-**Error codes are compared exactly as written** (case-sensitive).
+| Language | How to Expose Code |
+|----------|-------------------|
+| Python | Exception with `.code` property |
+| Rust | Error enum variant |
+| CLI | `[code]` in stderr + exit code |
+| C# | Exception type name |
 
-| Language Type | How to Expose Error Code |
-|---------------|-------------------------|
-| **Exceptions** (Python, C#, JS) | `.code` property or exception type name |
-| **Result types** (Rust, Go) | Error variant/type is the code |
-| **CLI tools** | stderr includes `[code]`, plus exit code |
-| **Return values** (C) | Document sentinel values as codes |
+Example Python exception:
 
-**Requirement:** The domain spec must list ALL error codes exhaustively.
+```python
+class ValidationError(Exception):
+    def __init__(self, code: str, message: str):
+        self.code = code
+        super().__init__(message)
+
+# Usage
+raise ValidationError("empty-input", "Input cannot be empty")
+```
+
+The runner matches `# error: [empty-input]` against `exception.code`.
 
 ---
 
-## Language Profile
+## Example: Complete Test File
 
-Specify for your target language:
+```toml
+# Test Configuration  
+module = "temperature"
+import = ["celsius_to_fahrenheit", "TemperatureError"]
+isolation = "per-block"
+```
 
-| Aspect | Value |
-|--------|-------|
-| **Language** | [LANGUAGE] |
-| **Code block tag** | [e.g., `py`, `cs`, `rs`, `ps1`, `sh`] |
-| **Comment prefix** | [e.g., `#`, `//`, `--`] |
-| **Error identity mechanism** | [.code property / exception type / result variant / exit+stderr] |
+# Temperature Conversion
+
+Converts between Celsius and Fahrenheit with validation.
+
+**Problem:** Users need temperature conversion, but invalid inputs (below 
+absolute zero) must fail clearly—not return nonsense values.
+
+**Error codes:**
+- `[below-absolute-zero]` — Temperature violates laws of physics
 
 ---
 
-## Structure
+## Celsius to Fahrenheit
 
-```
-tests/
-  <feature>.md    # One file per feature area
-```
+Standard formula: `F = (C × 9/5) + 32`
 
-Each markdown file:
-- Headers (`##`) create test groups
-- Prose explains *why* the behavior exists
-- Code blocks demonstrate and verify
-
----
-
-## Documenting Intent (Critical for Agents)
-
-The prose isn't decoration—it's how the agent understands *what correct means*.
-
-### Before each test group, explain:
-
-**What problem it solves:**
-```markdown
-## Input Validation
-
-Users paste data from spreadsheets, which often includes invisible
-whitespace characters. The validator must normalize these before
-length checks, or users get confusing "too long" errors on strings
-that look fine.
-```
-
-**Why an edge case matters:**
-```markdown
-### Empty vs Whitespace-Only
-
-These are different failures. Empty means "user submitted nothing"
-(user error). Whitespace-only means "user pasted invisible characters"
-(data cleaning needed). The error messages must distinguish them so
-callers can handle appropriately.
-```
-
-### The test name IS documentation:
-
-- Bad: `## Test 3`
-- Bad: `## Error Case`
-- Good: `## Rejects Strings Over 100 Characters`
-- Good: `## Treats Empty and Whitespace-Only Differently`
-
-### Inline comments for non-obvious assertions:
+### Converts Freezing Point
 
 ```py
-# -40 is where Celsius and Fahrenheit scales intersect
-celsius_to_fahrenheit(-40)  # expect: -40.0
-
-# IEEE 754: negative zero equals positive zero
-compare(-0.0, 0.0)  # expect: true
+celsius_to_fahrenheit(0)  # expect: 32.0
 ```
 
----
+### Converts Boiling Point
 
-## Writing Good Tests
-
-**One behavior per code block:**
-```
-validate("")  // error: [empty-input]
+```py  
+celsius_to_fahrenheit(100)  # expect: 212.0
 ```
 
-```
-validate(null)  // error: [null-input]
-```
+### Rejects Below Absolute Zero
 
-**Error codes must be stable identifiers:**
-- Good: `[invalid-assignment]`, `[null-input]`, `[parse-error]`
-- Bad: `[error]`, `[failed]`, `[oops]`
+-273.15°C is the physical limit. Below that is impossible:
 
----
-
-## Examples by Language
-
-### Python
 ```py
-validate(None)  # error: [null-input]
+celsius_to_fahrenheit(-300)  # error: [below-absolute-zero]
 ```
 
-### Rust
-```rs
-let r = parse("garbage");
-r.unwrap_err().code()  // expect: "invalid-input"
-```
+---
 
-### Bash
-```sh
-mytool
-# exit: 1
-# stderr: contains("[missing-argument]")
-```
+## Checklist Before Generating
 
-### PowerShell
-```ps1
-Get-Thing -Path "C:\nonexistent"  # error: [PathNotFound]
-```
+When asked to create literate tests, verify:
 
-### C#
-```cs
-service.Process(null);  // error: [ArgumentNullException]
-```
+- [ ] Create `.md` files in `tests/`, NOT `.py` test files
+- [ ] Create a custom `run_tests.py` runner, NOT pytest
+- [ ] Include TOML frontmatter at top of each test file
+- [ ] Include error code index before tests
+- [ ] Use `# expect:` and `# error:` assertion syntax
+- [ ] Prose explains WHY, not just WHAT
+- [ ] One behavior per code block
+- [ ] Test names are behavior descriptions
 
 ---
 
 ## Domain Spec Template
 
-Fill in when generating tests:
+Fill in when generating:
 
 - **What it does:** [DESCRIPTION]
-- **What problem it solves:** [WHY THIS EXISTS]
+- **What problem it solves:** [USER PAIN]
 - **Language:** [LANGUAGE]
-- **Code block tag:** [TAG]
-- **Comment prefix:** [PREFIX]
-- **Error identity mechanism:** [how errors expose stable codes]
-- **Bootstrapping:** [how code-under-test is loaded]
-- **Isolation model:** [`per-block` or `per-file`]
-- **Error codes:** [EXHAUSTIVE LIST with descriptions]
-- **Public API surface:** [LIST of functions/commands to test]
+- **Code block tag:** [py/rs/sh/etc]
+- **Comment prefix:** [#/////--]
+- **Error codes:** [EXHAUSTIVE LIST]
+- **Public API:** [FUNCTIONS TO TEST]
 - **Happy paths:** [LIST]
-- **Error cases:** [LIST with *why* each error exists]
-- **Edge cases:** [LIST with *why* each matters]
-
----
-
-## Requirements Checklist
-
-- Error code index at top of file
-- Every error code has at least one test
-- Every public function has at least one happy-path test
-- Edge cases (empty, null, boundary) covered
-- Prose explains intent—agent should understand correct behavior
-- Test names are behavior descriptions
-- Coverage is auditable by scanning headers
+- **Error cases:** [LIST + WHY]
+- **Edge cases:** [LIST + WHY]
