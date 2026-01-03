@@ -9,7 +9,7 @@ description: >
 license: MIT
 metadata:
   author: Ian
-  version: "2.2"
+  version: "2.3"
 ---
 
 # Literate Test Suite Generator
@@ -54,6 +54,8 @@ Copy the appropriate bundled runner for your language:
 | Language | Runner | Copy Command |
 |----------|--------|--------------|
 | Python | `run_tests.py` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/` |
+| JavaScript | `run_tests.js` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.js" tests/` |
+| TypeScript | `run_tests.ts` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ts" tests/` |
 | Bash/Shell | `run_tests.sh` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.sh" tests/` |
 | PowerShell | `run_tests.ps1` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" tests/` |
 | Rust | `run_tests.rs` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.rs" tests/` |
@@ -206,6 +208,28 @@ python tests/run_tests.py
 
 Code blocks: ` ```py ` or ` ```python `
 Assertions: `# expect:`, `# error:`
+
+### JavaScript Runner
+
+```bash
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.js" tests/
+node tests/run_tests.js
+```
+
+Code blocks: ` ```js ` or ` ```javascript `
+Assertions: `// expect:`, `// error:`, `// throws:`
+
+### TypeScript Runner
+
+Requires: `npm install -D tsx`
+
+```bash
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ts" tests/
+npx tsx tests/run_tests.ts
+```
+
+Code blocks: ` ```ts ` or ` ```typescript `
+Assertions: `// expect:`, `// error:`, `// throws:`
 
 ### Bash Runner
 
