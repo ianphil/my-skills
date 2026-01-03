@@ -9,7 +9,7 @@ description: >
 license: MIT
 metadata:
   author: Ian
-  version: "2.1"
+  version: "2.2"
 ---
 
 # Literate Test Suite Generator
@@ -47,22 +47,26 @@ do_thing(None)  # error: [null-input]
 
 The markdown file IS the test. Code blocks contain executable code. Comments are assertions.
 
-### 2. Test Runner (`tests/run_tests.py`)
+### 2. Test Runner (language-specific)
 
-Copy the bundled runner from this skill:
+Copy the appropriate bundled runner for your language:
 
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/run_tests.py
-```
+| Language | Runner | Copy Command |
+|----------|--------|--------------|
+| Python | `run_tests.py` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/` |
+| Bash/Shell | `run_tests.sh` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.sh" tests/` |
+| PowerShell | `run_tests.ps1` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" tests/` |
+| Rust | `run_tests.rs` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.rs" tests/` |
+| C# | `RunTests.cs` | `cp "${CLAUDE_PLUGIN_ROOT}/scripts/RunTests.cs" tests/` |
 
-The bundled runner:
-1. Parses markdown files for TOML frontmatter
-2. Extracts `py` and `sh` code blocks
-3. Validates `# expect:` and `# error:` assertions
-4. Supports matchers: `approx()`, `contains()`
-5. Reports pass/fail with colored output
+All runners:
+1. Parse markdown files for TOML frontmatter
+2. Extract language-specific code blocks
+3. Validate `# expect:` / `// expect:` and `# error:` / `// error:` assertions
+4. Support matchers: `approx()`, `contains()`
+5. Report pass/fail with colored output
 
-**Do NOT use pytest, jest, or any standard test framework.**
+**Do NOT use pytest, jest, xunit, or any standard test framework.**
 
 ---
 
@@ -87,10 +91,10 @@ This pattern enabled Simon Willison to port an entire HTML5 parser in 4.5 hours�
 ```
 project/
 ├── src/
-│   └── <module>.py           # Code under test
+│   └── <module>.<ext>        # Code under test
 └── tests/
-    ├── <feature>.md          # Markdown test files (NOT .py!)
-    └── run_tests.py          # Bundled test runner (copied from skill)
+    ├── <feature>.md          # Markdown test files
+    └── run_tests.<ext>       # Language-specific runner (copied from skill)
 ```
 
 ---
@@ -191,23 +195,61 @@ mycommand --bad-flag
 
 ---
 
-## Using the Bundled Runner
+## Using the Bundled Runners
 
-The bundled `scripts/run_tests.py` handles all runner functionality. To use:
+### Python Runner
 
 ```bash
-# Copy to project
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/run_tests.py
-
-# Run tests
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/
 python tests/run_tests.py
 ```
 
-The runner automatically:
-- Finds all `.md` files in `tests/`
-- Parses TOML frontmatter for module imports
-- Executes Python and shell code blocks
-- Validates assertions and reports results
+Code blocks: ` ```py ` or ` ```python `
+Assertions: `# expect:`, `# error:`
+
+### Bash Runner
+
+```bash
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.sh" tests/
+bash tests/run_tests.sh
+```
+
+Code blocks: ` ```sh ` or ` ```bash `
+Assertions: `# exit:`, `# stdout:`, `# stderr:`
+
+### PowerShell Runner
+
+```powershell
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" tests/
+pwsh tests/run_tests.ps1
+```
+
+Code blocks: ` ```ps1 ` or ` ```powershell `
+Assertions: `# exit:`, `# stdout:`, `# stderr:`, `# throws:`
+
+### Rust Runner
+
+Requires: `cargo install rust-script`
+
+```bash
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.rs" tests/
+rust-script tests/run_tests.rs
+```
+
+Code blocks: ` ```rs ` or ` ```rust `
+Assertions: `// expect:`, `// error:`, `// compiles`, `// compile_fails:`
+
+### C# Runner
+
+Requires: `dotnet tool install -g dotnet-script`
+
+```bash
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/RunTests.cs" tests/
+dotnet script tests/RunTests.cs
+```
+
+Code blocks: ` ```cs ` or ` ```csharp `
+Assertions: `// expect:`, `// error:`
 
 ---
 
@@ -289,11 +331,11 @@ celsius_to_fahrenheit(-300)  # error: [below-absolute-zero]
 
 When asked to create literate tests:
 
-- [ ] Copy bundled runner: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/`
-- [ ] Create `.md` files in `tests/`, NOT `.py` test files
+- [ ] Identify target language and copy appropriate runner from `${CLAUDE_PLUGIN_ROOT}/scripts/`
+- [ ] Create `.md` files in `tests/`, NOT language-specific test files
 - [ ] Include TOML frontmatter at top of each test file
 - [ ] Include error code index before tests
-- [ ] Use `# expect:` and `# error:` assertion syntax
+- [ ] Use correct assertion syntax for language (`#` for Python/Bash, `//` for Rust/C#)
 - [ ] Prose explains WHY, not just WHAT
 - [ ] One behavior per code block
 - [ ] Test names are behavior descriptions
