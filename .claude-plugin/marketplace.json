@@ -17,7 +17,8 @@
       "strict": false,
       "skills": [
         "./skills/astral-uv",
-        "./skills/literate-tests"
+        "./skills/literate-tests",
+        "./skills/tmux-tdd"
       ]
     }
   ]
