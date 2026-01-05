@@ -287,6 +287,58 @@ ls ~/.claude/conversation-logs/$(date -d yesterday +%Y-%m-%d)-*.md
 claude -p "Read @$(ls -t ~/.claude/conversation-logs/*.md | head -1) and summarize what we were working on"
 ```
 
+### Pruning Old Logs
+
+Keep your logs directory clean by removing old logs:
+
+**Interactive prune (with confirmation):**
+```bash
+# Delete logs older than 14 days (default)
+~/.claude/hooks/prune-logs.sh
+
+# Delete logs older than 30 days
+~/.claude/hooks/prune-logs.sh 30
+
+# Delete logs older than 7 days
+~/.claude/hooks/prune-logs.sh 7
+```
+
+**Dry run (preview without deleting):**
+```bash
+~/.claude/hooks/prune-logs.sh 14 --dry-run
+```
+
+**What it does:**
+- Shows list of logs to be deleted with dates
+- Displays total size to be freed
+- Asks for confirmation before deleting
+- Supports dry-run mode to preview
+
+**Setup the prune script:**
+```bash
+# Copy from skill
+cp /path/to/my-skills/skills/conversation-logging/scripts/prune-logs.sh ~/.claude/hooks/
+
+# Make executable
+chmod +x ~/.claude/hooks/prune-logs.sh
+
+# Create an alias (optional)
+echo "alias prune-claude-logs='~/.claude/hooks/prune-logs.sh'" >> ~/.bashrc
+source ~/.bashrc
+
+# Now you can just run:
+prune-claude-logs
+```
+
+**Automated cleanup with cron:**
+```bash
+# Add to crontab to run monthly
+crontab -e
+
+# Add this line to delete logs older than 30 days on the 1st of each month
+0 0 1 * * $HOME/.claude/hooks/prune-logs.sh 30 <<< "y"
+```
+
 ## Log Format
 
 Each log file has a unique name per session: `YYYY-MM-DD-session-XXXXXXXX.md`
@@ -425,9 +477,12 @@ echo "$INPUT" | jq '.' >> "$LOG_DIR/$(date +%Y-%m-%d).jsonl"
 
 **Recommendations:**
 
-1. **Regular cleanup**: Delete old logs you don't need
+1. **Regular cleanup**: Use the prune script to delete old logs
    ```bash
-   # Delete logs older than 30 days
+   # Interactive deletion of logs older than 14 days
+   ~/.claude/hooks/prune-logs.sh
+
+   # Or use find directly
    find ~/.claude/conversation-logs -name "*.md" -mtime +30 -delete
    ```
 
@@ -473,7 +528,9 @@ Add `.claude/conversation.md` to your `.gitignore`.
 | List today's sessions | `ls ~/.claude/conversation-logs/$(date +%Y-%m-%d)-*.md` |
 | List all logs | `ls -lh ~/.claude/conversation-logs/` |
 | Search logs | `grep -r "search term" ~/.claude/conversation-logs/` |
-| Clean old logs | `find ~/.claude/conversation-logs -mtime +30 -delete` |
+| Prune old logs | `~/.claude/hooks/prune-logs.sh` (default: 14 days) |
+| Prune with custom days | `~/.claude/hooks/prune-logs.sh 30` |
+| Dry run prune | `~/.claude/hooks/prune-logs.sh 14 --dry-run` |
 | Share with Claude | `@~/.claude/conversation-logs/YYYY-MM-DD-session-XXXXX.md` |
 | Disable logging | Rename hook script to `.disabled` |
 

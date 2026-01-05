@@ -25,21 +25,25 @@ Or add manually to your `.claude/settings.json`:
 Automatically log all Claude Code interactions to markdown files using global hooks. Track prompts, tool usage, and responses across all sessions.
 
 **Features:**
-- Logs every prompt, tool execution, and response
-- Organized by date in `~/.claude/conversation-logs/`
+- Logs every prompt, tool execution, and response with detailed context
+- Organized by session in `~/.claude/conversation-logs/`
 - Enables conversation replay and context sharing
+- Includes prune script for cleaning old logs
 - Useful for debugging and auditing
 
 **Example usage:**
 ```bash
-# View today's conversations
-cat ~/.claude/conversation-logs/$(date +%Y-%m-%d).md
+# View most recent conversation
+cat $(ls -t ~/.claude/conversation-logs/*.md | head -1)
 
 # Share context with Claude
-claude -p "@~/.claude/conversation-logs/2026-01-04.md What were we working on?"
+claude -p "@~/.claude/conversation-logs/2026-01-04-session-a1b2c3d4.md What were we working on?"
 
 # Search across all logs
 grep -r "bug fix" ~/.claude/conversation-logs/
+
+# Prune logs older than 14 days
+~/.claude/hooks/prune-logs.sh
 ```
 
 ### astral-uv
