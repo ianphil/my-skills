@@ -14,43 +14,84 @@ Automatically log all Claude Code interactions to structured markdown files usin
 - **Session metadata**: Working directory, timestamps, session IDs
 - **Response completion**: When Claude finishes each response
 
+Each Claude instance gets its own log file to prevent conflicts when running multiple sessions simultaneously.
+
 ## Installation
 
-### Step 1: Create Hook Script
+### Step 1: Copy Hook Script
 
-Create the logging hook at `~/.claude/hooks/log-conversation.sh`:
+The logging script is provided in this skill's `scripts/` directory. Copy it to your hooks directory:
+
+```bash
+# Create hooks directory if it doesn't exist
+mkdir -p ~/.claude/hooks
+
+# Copy the script from this skill
+cp /path/to/my-skills/skills/conversation-logging/scripts/log-conversation.sh ~/.claude/hooks/
+
+# Make it executable
+chmod +x ~/.claude/hooks/log-conversation.sh
+```
+
+Or create it manually at `~/.claude/hooks/log-conversation.sh`:
 
 ```bash
 #!/bin/bash
 # Global hook to log Claude Code conversation events
+# Handles multiple concurrent Claude instances by using unique session IDs
 
 LOG_DIR="$HOME/.claude/conversation-logs"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-DATE_FILE="$LOG_DIR/$(date '+%Y-%m-%d').md"
+DATE=$(date '+%Y-%m-%d')
 
 mkdir -p "$LOG_DIR"
 
 # Read JSON input from stdin
 INPUT=$(cat)
 
-# Extract key fields using jq if available, otherwise use simple grep
+# Extract key fields using jq if available
 if command -v jq &> /dev/null; then
     EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // "unknown"')
     CWD=$(echo "$INPUT" | jq -r '.cwd // "unknown"')
     TOOL=$(echo "$INPUT" | jq -r '.tool_name // ""')
     PROMPT=$(echo "$INPUT" | jq -r '.prompt // ""')
+    SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""')
 else
     EVENT="unknown"
     CWD=$(pwd)
+    SESSION_ID=""
+fi
+
+# Create unique log file per session
+# Format: YYYY-MM-DD-session-XXXXX.md
+if [ -n "$SESSION_ID" ]; then
+    # Extract first 8 chars of session ID for readability
+    SHORT_SESSION="${SESSION_ID:0:8}"
+    LOG_FILE="$LOG_DIR/${DATE}-session-${SHORT_SESSION}.md"
+else
+    # Fallback: use PID if session_id not available
+    LOG_FILE="$LOG_DIR/${DATE}-pid-$$.md"
+fi
+
+# Initialize log file with header if it doesn't exist
+if [ ! -f "$LOG_FILE" ]; then
+    cat > "$LOG_FILE" <<EOF
+# Claude Code Conversation Log
+**Date:** $DATE
+**Session ID:** ${SESSION_ID:-unknown}
+**Started:** $TIMESTAMP
+
+---
+
+EOF
 fi
 
 # Log based on event type
 case "$EVENT" in
     UserPromptSubmit)
-        cat >> "$DATE_FILE" <<EOF
+        cat >> "$LOG_FILE" <<EOF
 
----
-## [$TIMESTAMP] User Prompt Submitted
+## [$TIMESTAMP] User Prompt
 **Working Directory:** \`$CWD\`
 
 \`\`\`
@@ -62,21 +103,21 @@ EOF
 
     PostToolUse)
         if [ -n "$TOOL" ]; then
-            echo "### [$TIMESTAMP] Tool: $TOOL" >> "$DATE_FILE"
-            echo "" >> "$DATE_FILE"
+            echo "### [$TIMESTAMP] Tool: \`$TOOL\`" >> "$LOG_FILE"
+            echo "" >> "$LOG_FILE"
         fi
         ;;
 
     Stop)
-        echo "### [$TIMESTAMP] Claude Response Complete" >> "$DATE_FILE"
-        echo "" >> "$DATE_FILE"
+        echo "### [$TIMESTAMP] Response Complete" >> "$LOG_FILE"
+        echo "" >> "$LOG_FILE"
         ;;
 esac
 
 exit 0
 ```
 
-Make it executable:
+Then make it executable:
 ```bash
 chmod +x ~/.claude/hooks/log-conversation.sh
 ```
@@ -130,30 +171,41 @@ If you already have other settings in your `settings.json`, merge the `hooks` se
 Run any Claude Code command and check the logs:
 
 ```bash
-# Check today's log
-cat ~/.claude/conversation-logs/$(date +%Y-%m-%d).md
-
 # List all conversation logs
 ls -lh ~/.claude/conversation-logs/
+
+# View the most recent log
+cat $(ls -t ~/.claude/conversation-logs/*.md | head -1)
 ```
+
+**Note:** Each Claude session creates a unique log file with format `YYYY-MM-DD-session-XXXXX.md` to prevent conflicts between concurrent instances.
 
 ## Usage
 
 ### Viewing Conversation Logs
 
-**Today's conversations:**
+**Most recent session:**
 ```bash
-cat ~/.claude/conversation-logs/$(date +%Y-%m-%d).md
+cat $(ls -t ~/.claude/conversation-logs/*.md | head -1)
 ```
 
-**Specific date:**
+**All sessions from today:**
 ```bash
-cat ~/.claude/conversation-logs/2026-01-05.md
+ls -1 ~/.claude/conversation-logs/$(date +%Y-%m-%d)-*.md
 ```
 
-**Recent logs:**
+**View specific session:**
 ```bash
-ls -lt ~/.claude/conversation-logs/ | head -5
+# List today's sessions to find the one you want
+ls ~/.claude/conversation-logs/$(date +%Y-%m-%d)-*.md
+
+# Then view it
+cat ~/.claude/conversation-logs/2026-01-05-session-a1b2c3d4.md
+```
+
+**Recent logs (last 5 sessions):**
+```bash
+ls -lt ~/.claude/conversation-logs/ | head -6
 ```
 
 **Search across all logs:**
@@ -165,15 +217,23 @@ grep -r "search term" ~/.claude/conversation-logs/
 
 When you want Claude to understand a previous conversation:
 
-**Option 1: Direct file reference**
+**Option 1: Reference most recent session**
 ```
-Read my conversation log from yesterday:
-@~/.claude/conversation-logs/2026-01-04.md
+Read my last conversation log:
+@$(ls -t ~/.claude/conversation-logs/*.md | head -1)
 
 What were we working on?
 ```
 
-**Option 2: Copy relevant sections**
+**Option 2: Reference specific session**
+```
+Read my conversation from this morning:
+@~/.claude/conversation-logs/2026-01-04-session-a1b2c3d4.md
+
+Continue where we left off.
+```
+
+**Option 3: Copy relevant sections**
 ```
 Here's what happened in my last session:
 
@@ -182,7 +242,7 @@ Here's what happened in my last session:
 Continue from where we left off.
 ```
 
-**Option 3: Search and reference**
+**Option 4: Search and reference**
 ```bash
 # Find the conversation about a topic
 grep -l "GitHub Issues" ~/.claude/conversation-logs/*.md
@@ -195,11 +255,14 @@ Then reference that file with `@` in Claude Code.
 When Claude encounters errors or you need to replay a session:
 
 ```bash
-# Find failed tool executions
-grep -A 5 "Tool: Bash" ~/.claude/conversation-logs/$(date +%Y-%m-%d).md
+# Find failed tool executions in most recent session
+grep -A 5 "Tool: Bash" $(ls -t ~/.claude/conversation-logs/*.md | head -1)
 
-# See what prompts led to errors
-grep -B 10 "error" ~/.claude/conversation-logs/$(date +%Y-%m-%d).md
+# See what prompts led to errors across all today's sessions
+grep -B 10 "error" ~/.claude/conversation-logs/$(date +%Y-%m-%d)-*.md
+
+# Find specific session with errors
+grep -l "error" ~/.claude/conversation-logs/*.md
 ```
 
 ### Resuming Work Across Sessions
@@ -207,35 +270,49 @@ grep -B 10 "error" ~/.claude/conversation-logs/$(date +%Y-%m-%d).md
 Use conversation logs to pick up where you left off:
 
 ```bash
-# View yesterday's work
-cat ~/.claude/conversation-logs/$(date -d yesterday +%Y-%m-%d).md
+# View most recent session
+cat $(ls -t ~/.claude/conversation-logs/*.md | head -1)
+
+# View yesterday's sessions
+ls ~/.claude/conversation-logs/$(date -d yesterday +%Y-%m-%d)-*.md
 
 # Share with Claude
-claude -p "Read @~/.claude/conversation-logs/$(date -d yesterday +%Y-%m-%d).md and summarize what we were working on"
+claude -p "Read @$(ls -t ~/.claude/conversation-logs/*.md | head -1) and summarize what we were working on"
 ```
 
 ## Log Format
 
-Each log file is organized chronologically:
+Each log file has a unique name per session: `YYYY-MM-DD-session-XXXXXXXX.md`
+
+Log contents are organized chronologically:
 
 ```markdown
+# Claude Code Conversation Log
+**Date:** 2026-01-05
+**Session ID:** a1b2c3d4-5678-90ab-cdef-1234567890ab
+**Started:** 2026-01-05 14:23:10
+
 ---
-## [2026-01-05 14:23:15] User Prompt Submitted
+
+## [2026-01-05 14:23:15] User Prompt
 **Working Directory:** `/home/user/project`
 
 ```
 Implement the login feature
 ```
 
-### [2026-01-05 14:23:16] Tool: Read
-### [2026-01-05 14:23:17] Tool: Edit
-### [2026-01-05 14:23:18] Tool: Write
-### [2026-01-05 14:23:20] Claude Response Complete
+### [2026-01-05 14:23:16] Tool: `Read`
+### [2026-01-05 14:23:17] Tool: `Edit`
+### [2026-01-05 14:23:18] Tool: `Write`
+### [2026-01-05 14:23:20] Response Complete
 
----
-## [2026-01-05 14:25:30] User Prompt Submitted
+## [2026-01-05 14:25:30] User Prompt
 ...
 ```
+
+**File naming:**
+- Session-based: `2026-01-05-session-a1b2c3d4.md` (first 8 chars of session ID)
+- Fallback (if no session ID): `2026-01-05-pid-12345.md` (process ID)
 
 ## Customization
 
@@ -349,11 +426,12 @@ Add `.claude/conversation.md` to your `.gitignore`.
 
 | Task | Command |
 |------|---------|
-| View today's log | `cat ~/.claude/conversation-logs/$(date +%Y-%m-%d).md` |
+| View most recent session | `cat $(ls -t ~/.claude/conversation-logs/*.md \| head -1)` |
+| List today's sessions | `ls ~/.claude/conversation-logs/$(date +%Y-%m-%d)-*.md` |
 | List all logs | `ls -lh ~/.claude/conversation-logs/` |
 | Search logs | `grep -r "search term" ~/.claude/conversation-logs/` |
 | Clean old logs | `find ~/.claude/conversation-logs -mtime +30 -delete` |
-| Share with Claude | `@~/.claude/conversation-logs/YYYY-MM-DD.md` |
+| Share with Claude | `@~/.claude/conversation-logs/YYYY-MM-DD-session-XXXXX.md` |
 | Disable logging | Rename hook script to `.disabled` |
 
 ## See Also
