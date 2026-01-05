@@ -10,9 +10,16 @@ Automatically log all Claude Code interactions to structured markdown files usin
 ## What Gets Logged
 
 - **User prompts**: Every prompt submitted to Claude
-- **Tool executions**: Which tools were used and when
+- **Tool executions with context**: Tool name plus specific details:
+  - **Read/Write/Edit**: File paths and content previews
+  - **Bash**: Commands and output (first 10 lines)
+  - **Glob/Grep**: Search patterns
+  - **TodoWrite**: Task lists with status indicators
+  - **Task**: Subagent type and prompt preview
+  - **WebSearch/WebFetch**: Queries and URLs
+  - **AskUserQuestion**: Questions asked
 - **Session metadata**: Working directory, timestamps, session IDs
-- **Response completion**: When Claude finishes each response
+- **Claude responses**: Excerpts from Claude's actual responses (last 500 chars)
 
 Each Claude instance gets its own log file to prevent conflicts when running multiple sessions simultaneously.
 
@@ -284,7 +291,7 @@ claude -p "Read @$(ls -t ~/.claude/conversation-logs/*.md | head -1) and summari
 
 Each log file has a unique name per session: `YYYY-MM-DD-session-XXXXXXXX.md`
 
-Log contents are organized chronologically:
+Log contents are organized chronologically with rich context:
 
 ```markdown
 # Claude Code Conversation Log
@@ -301,10 +308,46 @@ Log contents are organized chronologically:
 Implement the login feature
 ```
 
-### [2026-01-05 14:23:16] Tool: `Read`
-### [2026-01-05 14:23:17] Tool: `Edit`
-### [2026-01-05 14:23:18] Tool: `Write`
-### [2026-01-05 14:23:20] Response Complete
+### [2026-01-05 14:23:16] Tool: `Read` - `/home/user/project/src/auth.js`
+
+### [2026-01-05 14:23:17] Tool: `Bash`
+```bash
+git status
+```
+<details><summary>Output</summary>
+
+```
+On branch main
+Changes not staged for commit:
+  modified:   src/auth.js
+```
+</details>
+
+### [2026-01-05 14:23:18] Tool: `Write` - `/home/user/project/src/login.js`
+<details><summary>Preview</summary>
+
+```
+import { authenticate } from './auth.js';
+
+export async function login(username, password) {
+  ret...
+```
+</details>
+
+### [2026-01-05 14:23:20] Tool: `TodoWrite` - 3 tasks
+<details><summary>Tasks</summary>
+
+- [x] Create login function
+- [>] Add error handling
+- [ ] Write tests
+</details>
+
+### [2026-01-05 14:23:25] Claude Response
+<details><summary>Response excerpt</summary>
+
+I've implemented the login feature with proper authentication. The new
+login.js file handles user authentication and includes error handling...
+</details>
 
 ## [2026-01-05 14:25:30] User Prompt
 ...
