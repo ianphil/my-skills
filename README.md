@@ -20,6 +20,28 @@ Or add manually to your `.claude/settings.json`:
 
 ## Available Skills
 
+### conversation-logging
+
+Automatically log all Claude Code interactions to markdown files using global hooks. Track prompts, tool usage, and responses across all sessions.
+
+**Features:**
+- Logs every prompt, tool execution, and response
+- Organized by date in `~/.claude/conversation-logs/`
+- Enables conversation replay and context sharing
+- Useful for debugging and auditing
+
+**Example usage:**
+```bash
+# View today's conversations
+cat ~/.claude/conversation-logs/$(date +%Y-%m-%d).md
+
+# Share context with Claude
+claude -p "@~/.claude/conversation-logs/2026-01-04.md What were we working on?"
+
+# Search across all logs
+grep -r "bug fix" ~/.claude/conversation-logs/
+```
+
 ### astral-uv
 
 Fast Python package and project management using [Astral's uv](https://github.com/astral-sh/uv).
