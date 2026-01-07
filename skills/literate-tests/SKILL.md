@@ -91,63 +91,29 @@ This pattern enabled Simon Willison to port an entire HTML5 parser in 4.5 hours�
 
 ## Living Documentation Through Intent
 
-Literate tests transform test files into **living documentation** that:
+Tests = executable docs that stay accurate (lies fail CI). Each test answers: **"What can the user now do?"**
 
-1. **Explains the *why* behind each component** — Prose sections describe purpose, not just behavior
-2. **Serves as onboarding material for new engineers** — Reading the tests teaches the domain
-3. **Defines the contract for any reimplementation** — Porting to another language? These are your acceptance criteria
-4. **Remains accurate because the tests enforce it** — Documentation that lies fails CI
+**Intent structure per component:**
+- **Purpose:** One sentence — what does this do?
+- **Why it matters:** Business/technical value
+- **After X completes, a user can...** — Concrete outcomes
+- **Error codes:** What can go wrong
 
-### Writing Intent-Focused Tests
-
-Each test section should answer: **"What can the user now do that they couldn't before?"**
-
-**Bad (implementation-focused):**
-```markdown
-## Configuration
-
-### Priority Is 1
-
-\`\`\`py
-config["buildout"].priority  # expect: 1
-\`\`\`
-```
-
-**Good (intent-focused):**
+**Example:**
 ```markdown
 ## Buildout Intent
+**Purpose:** Provision shared infrastructure
+**Why it matters:** Without this, no Service Bus/KeyVault/storage
+**After Buildout, developer can:** Connect to Service Bus, store secrets, upload artifacts
 
-**Purpose:** Provision shared foundational infrastructure that all other components depend on.
-
-**Why it matters:** Without Buildout, developers have no Service Bus to send messages, 
-no Key Vault for secrets, and no storage for artifacts. It's the foundation.
-
-**After Buildout completes, a developer can:**
-- Connect to the shared Service Bus namespace
-- Store and retrieve secrets from Key Vault
-- Upload and download artifacts from storage
-
-### Service Bus Namespace Is Accessible
-
+### Service Bus Is Accessible
 \`\`\`py
-# After Buildout, developers can connect to shared Service Bus
-namespace = get_service_bus_namespace()
 namespace.is_accessible  # expect: True
 \`\`\`
 ```
 
-### Intent Documentation Structure
-
-For each major component or feature, include:
-
-| Section | Purpose |
-|---------|---------|
-| **Purpose** | One sentence: what does this do? |
-| **Why it matters** | Business/technical value—why should anyone care? |
-| **After X completes, a user can...** | Concrete outcomes as bullet points |
-| **Error codes** | What can go wrong and what each code means |
-
-This structure ensures tests document **outcomes**, not just **mechanics**.
+**Bad:** `config["buildout"].priority # expect: 1` (implementation detail)
+**Good:** "After Buildout, developer can connect to Service Bus" (user outcome)
 
 ---
 
@@ -231,102 +197,19 @@ pi_value()         # expect: approx(3.14159, tol=0.0001)
 
 ## Using the Bundled Runners
 
-### Python Runner
+Copy runner: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/<runner>" tests/`
 
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.py" tests/
-python tests/run_tests.py
-```
+| Language | Run Command | Code Blocks | Assertions | Requirements |
+|----------|-------------|-------------|------------|--------------|
+| Python | `python tests/run_tests.py` | `py`, `python` | `# expect:`, `# error:` | - |
+| JavaScript | `node tests/run_tests.js` | `js`, `javascript` | `// expect:`, `// error:`, `// throws:` | - |
+| TypeScript | `npx tsx tests/run_tests.ts` | `ts`, `typescript` | `// expect:`, `// error:`, `// throws:` | `npm install -D tsx` |
+| Bash | `bash tests/run_tests.sh` | `sh`, `bash` | `# exit:`, `# stdout:`, `# stderr:` | - |
+| PowerShell | `pwsh tests/run_tests.ps1` | `ps1`, `powershell`, `bash`, `sh` | `# exit:`, `# stdout:`, `# stderr:`, `# throws:`, `# expect:` | Supports both PS & bash |
+| Rust | `rust-script tests/run_tests.rs` | `rs`, `rust` | `// expect:`, `// error:`, `// compiles`, `// compile_fails:` | `cargo install rust-script` |
+| C# | `dotnet script tests/RunTests.cs` | `cs`, `csharp` | `// expect:`, `// error:` | `dotnet tool install -g dotnet-script` |
 
-Code blocks: ` ```py ` or ` ```python `
-Assertions: `# expect:`, `# error:`
-
-### JavaScript Runner
-
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.js" tests/
-node tests/run_tests.js
-```
-
-Code blocks: ` ```js ` or ` ```javascript `
-Assertions: `// expect:`, `// error:`, `// throws:`
-
-### TypeScript Runner
-
-Requires: `npm install -D tsx`
-
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ts" tests/
-npx tsx tests/run_tests.ts
-```
-
-Code blocks: ` ```ts ` or ` ```typescript `
-Assertions: `// expect:`, `// error:`, `// throws:`
-
-### Bash Runner
-
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.sh" tests/
-bash tests/run_tests.sh
-```
-
-Code blocks: ` ```sh ` or ` ```bash `
-Assertions: `# exit:`, `# stdout:`, `# stderr:`
-
-### PowerShell Runner
-
-```powershell
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" tests/
-pwsh tests/run_tests.ps1
-```
-
-Code blocks: ` ```ps1 `, ` ```powershell `, ` ```bash `, or ` ```sh `
-Assertions: `# exit:`, `# stdout:`, `# stderr:`, `# throws:`, `# expect:`
-
-The PowerShell runner supports both PowerShell and Bash code blocks, making it useful for
-cross-platform testing. The `# expect:` assertion compares stdout to an expected value:
-
-```bash
-echo "hello"
-# expect: hello
-```
-
-```bash
-# Check exit code pattern
-mycommand --flag
-echo $?
-# expect: 0
-```
-
-```bash
-# Contains matcher
-echo "success: operation completed"
-# expect: contains("success")
-```
-
-### Rust Runner
-
-Requires: `cargo install rust-script`
-
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.rs" tests/
-rust-script tests/run_tests.rs
-```
-
-Code blocks: ` ```rs ` or ` ```rust `
-Assertions: `// expect:`, `// error:`, `// compiles`, `// compile_fails:`
-
-### C# Runner
-
-Requires: `dotnet tool install -g dotnet-script`
-
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/RunTests.cs" tests/
-dotnet script tests/RunTests.cs
-```
-
-Code blocks: ` ```cs ` or ` ```csharp `
-Assertions: `// expect:`, `// error:`
+**PowerShell runner note:** The `# expect:` assertion compares stdout: `echo "hello" # expect: hello`
 
 ---
 
