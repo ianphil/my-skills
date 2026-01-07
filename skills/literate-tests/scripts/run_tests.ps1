@@ -27,7 +27,7 @@ if ((Split-Path -Leaf $ScriptDir) -eq "tests") {
 }
 
 if (-not (Test-Path $TestsDir)) {
-    Write-Host "No tests/ directory found"
+    Write-Host "Tests directory not found: $TestsDir"
     exit 1
 }
 
@@ -49,11 +49,19 @@ function Run-Test {
     param(
         [string]$Code,
         [string]$TestName,
-        [string[]]$Assertions
+        [string[]]$Assertions,
+        [string]$Language = "ps1"
     )
 
-    # Create temp script
-    $tempScript = [System.IO.Path]::GetTempFileName() + ".ps1"
+    # Create temp script with appropriate extension
+    $ext = if ($Language -in @("bash", "sh")) { ".sh" } else { ".ps1" }
+    $tempScript = [System.IO.Path]::GetTempFileName() + $ext
+
+    # For bash, add shebang
+    if ($Language -in @("bash", "sh")) {
+        $Code = "#!/bin/bash`n$Code"
+    }
+
     Set-Content -Path $tempScript -Value $Code
 
     # Execute and capture output
@@ -62,7 +70,12 @@ function Run-Test {
     $exitCode = 0
 
     try {
-        $output = & pwsh -NoProfile -NonInteractive -File $tempScript 2>&1
+        if ($Language -in @("bash", "sh")) {
+            chmod +x $tempScript 2>$null
+            $output = & bash $tempScript 2>&1
+        } else {
+            $output = & pwsh -NoProfile -NonInteractive -File $tempScript 2>&1
+        }
         $stdout = ($output | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] }) -join "`n"
         $stderr = ($output | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] }) -join "`n"
         $exitCode = $LASTEXITCODE
@@ -141,6 +154,49 @@ function Run-Test {
                     }
                 }
             }
+            "expect" {
+                # Simple value comparison - compare stdout to expected value
+                $expected = $value.Trim()
+                $actual = $stdout.Trim()
+                
+                # Handle contains() syntax
+                if ($expected -match '^contains\("([^"]+)"\)$') {
+                    $substring = $matches[1]
+                    if ($actual -notlike "*$substring*") {
+                        $passed = $false
+                        $failMessage = "Expected output to contain '$substring', got '$actual'"
+                    }
+                }
+                # Handle boolean True/False
+                elseif ($expected -eq "True" -or $expected -eq "False") {
+                    if ($actual -ne $expected) {
+                        $passed = $false
+                        $failMessage = "Expected $expected, got '$actual'"
+                    }
+                }
+                # Handle numeric
+                elseif ($expected -match '^\d+$') {
+                    if ($actual -ne $expected) {
+                        $passed = $false
+                        $failMessage = "Expected $expected, got '$actual'"
+                    }
+                }
+                # Handle quoted strings
+                elseif ($expected -match '^"([^"]*)"$') {
+                    $expectedStr = $matches[1]
+                    if ($actual -ne $expectedStr) {
+                        $passed = $false
+                        $failMessage = "Expected '$expectedStr', got '$actual'"
+                    }
+                }
+                # Plain string comparison
+                else {
+                    if ($actual -ne $expected) {
+                        $passed = $false
+                        $failMessage = "Expected '$expected', got '$actual'"
+                    }
+                }
+            }
         }
     }
 
@@ -187,7 +243,7 @@ function Process-File {
         }
 
         # Start of code block
-        if ($line -match "^``````(ps1|powershell|pwsh)$" -and -not $inCodeBlock) {
+        if ($line -match "^``````(ps1|powershell|pwsh|bash|sh)$" -and -not $inCodeBlock) {
             $inCodeBlock = $true
             $codeLang = $matches[1]
             $codeContent = ""
@@ -200,14 +256,14 @@ function Process-File {
             $inCodeBlock = $false
             if ($assertions.Count -gt 0) {
                 $testName = if ($currentTest) { $currentTest } else { "Test at line $lineNum" }
-                Run-Test -Code $codeContent -TestName $testName -Assertions $assertions
+                Run-Test -Code $codeContent -TestName $testName -Assertions $assertions -Language $codeLang
             }
             continue
         }
 
         # Inside code block
         if ($inCodeBlock) {
-            if ($line -match "^#\s*(exit|stdout|stderr|throws):\s*(.+)$") {
+            if ($line -match "^#\s*(exit|stdout|stderr|throws|expect):\s*(.+)$") {
                 $assertions += "$($matches[1]):$($matches[2])"
             } else {
                 $codeContent += "$line`n"

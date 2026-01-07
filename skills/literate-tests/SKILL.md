@@ -310,8 +310,29 @@ cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" tests/
 pwsh tests/run_tests.ps1
 ```
 
-Code blocks: ` ```ps1 ` or ` ```powershell `
-Assertions: `# exit:`, `# stdout:`, `# stderr:`, `# throws:`
+Code blocks: ` ```ps1 `, ` ```powershell `, ` ```bash `, or ` ```sh `
+Assertions: `# exit:`, `# stdout:`, `# stderr:`, `# throws:`, `# expect:`
+
+The PowerShell runner supports both PowerShell and Bash code blocks, making it useful for
+cross-platform testing. The `# expect:` assertion compares stdout to an expected value:
+
+```bash
+echo "hello"
+# expect: hello
+```
+
+```bash
+# Check exit code pattern
+mycommand --flag
+echo $?
+# expect: 0
+```
+
+```bash
+# Contains matcher
+echo "success: operation completed"
+# expect: contains("success")
+```
 
 ### Rust Runner
 
