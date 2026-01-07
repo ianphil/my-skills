@@ -9,7 +9,7 @@ description: >
 license: MIT
 metadata:
   author: Ian
-  version: "2.3"
+  version: "2.4"
 ---
 
 # Literate Test Suite Generator
@@ -85,6 +85,68 @@ The test file is both:
 - **Executable specification** agents verify against
 
 This pattern enabled Simon Willison to port an entire HTML5 parser in 4.5 hours—the agent ran 9,200 tests autonomously.
+
+---
+
+## Living Documentation Through Intent
+
+Literate tests transform test files into **living documentation** that:
+
+1. **Explains the *why* behind each component** — Prose sections describe purpose, not just behavior
+2. **Serves as onboarding material for new engineers** — Reading the tests teaches the domain
+3. **Defines the contract for any reimplementation** — Porting to another language? These are your acceptance criteria
+4. **Remains accurate because the tests enforce it** — Documentation that lies fails CI
+
+### Writing Intent-Focused Tests
+
+Each test section should answer: **"What can the user now do that they couldn't before?"**
+
+**Bad (implementation-focused):**
+```markdown
+## Configuration
+
+### Priority Is 1
+
+\`\`\`py
+config["buildout"].priority  # expect: 1
+\`\`\`
+```
+
+**Good (intent-focused):**
+```markdown
+## Buildout Intent
+
+**Purpose:** Provision shared foundational infrastructure that all other components depend on.
+
+**Why it matters:** Without Buildout, developers have no Service Bus to send messages, 
+no Key Vault for secrets, and no storage for artifacts. It's the foundation.
+
+**After Buildout completes, a developer can:**
+- Connect to the shared Service Bus namespace
+- Store and retrieve secrets from Key Vault
+- Upload and download artifacts from storage
+
+### Service Bus Namespace Is Accessible
+
+\`\`\`py
+# After Buildout, developers can connect to shared Service Bus
+namespace = get_service_bus_namespace()
+namespace.is_accessible  # expect: True
+\`\`\`
+```
+
+### Intent Documentation Structure
+
+For each major component or feature, include:
+
+| Section | Purpose |
+|---------|---------|
+| **Purpose** | One sentence: what does this do? |
+| **Why it matters** | Business/technical value—why should anyone care? |
+| **After X completes, a user can...** | Concrete outcomes as bullet points |
+| **Error codes** | What can go wrong and what each code means |
+
+This structure ensures tests document **outcomes**, not just **mechanics**.
 
 ---
 
@@ -360,9 +422,10 @@ When asked to create literate tests:
 - [ ] Include TOML frontmatter at top of each test file
 - [ ] Include error code index before tests
 - [ ] Use correct assertion syntax for language (`#` for Python/Bash, `//` for Rust/C#)
+- [ ] **Document intent**: Purpose, Why it matters, Outcomes (not just mechanics)
 - [ ] Prose explains WHY, not just WHAT
 - [ ] One behavior per code block
-- [ ] Test names are behavior descriptions
+- [ ] Test names are behavior descriptions (outcomes, not implementations)
 
 ---
 
@@ -380,3 +443,26 @@ Fill in when generating:
 - **Happy paths:** [LIST]
 - **Error cases:** [LIST + WHY]
 - **Edge cases:** [LIST + WHY]
+
+### Intent Template (per component/feature)
+
+For each major component, document:
+
+```markdown
+## [Component] Intent
+
+**Purpose:** [One sentence: what does this component do?]
+
+**Why it matters:** [2-3 sentences: business/technical value, what breaks without it]
+
+**After [Component] completes, a user can:**
+- [Concrete outcome 1]
+- [Concrete outcome 2]
+- [Concrete outcome 3]
+
+**Error codes:**
+- `[error-code-1]` — [When this happens and what it means]
+- `[error-code-2]` — [When this happens and what it means]
+```
+
+This ensures your tests serve as both **executable specifications** and **onboarding documentation**.
