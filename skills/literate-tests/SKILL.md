@@ -3,14 +3,10 @@ name: literate-tests
 description: >
   This skill should be used when the user asks to "create literate tests",
   "generate markdown tests", "specification-as-tests", "TDD with markdown",
-  "agent-driven testing", "port code to another language", or mentions test 
-  suites where markdown IS the test format. NOT for pytest/jest/unittest. 
-  Creates .md test files with inline assertions and uses a bundled custom 
+  "agent-driven testing", "port code to another language", or mentions test
+  suites where markdown IS the test format. NOT for pytest/jest/unittest.
+  Creates .md test files with inline assertions and uses a bundled custom
   test runner. Includes cookbook for porting code between languages.
-license: MIT
-metadata:
-  author: Ian
-  version: "2.5"
 ---
 
 # Literate Test Suite Generator
@@ -18,7 +14,7 @@ metadata:
 Create a test suite for **[DOMAIN]** that an agent can run autonomously.
 
 > **Porting Code?** If your goal is to port code from one language to another (e.g., PowerShell → bash),
-> see the **[Porting Code Cookbook](cookbooks/creating-tests-for-porting-code.md)** for a comprehensive
+> see the **[Porting Code Cookbook](references/creating-tests-for-porting-code.md)** for a comprehensive
 > guide on creating layered test suites that define the contract both implementations must satisfy.
 
 ## What This Pattern Produces
@@ -221,46 +217,15 @@ validate("")  # error: [empty-input]
 
 ## Assertion Syntax
 
-### Value Assertions
+Assertions are inline comments that define expected behavior:
 
 ```py
-expression  # expect: <value>
+validate("hello")  # expect: True
+validate("")       # error: [empty-input]
+pi_value()         # expect: approx(3.14159, tol=0.0001)
 ```
 
-The line before `# expect:` must be an **evaluable expression**, not a statement.
-
-```py
-# Setup lines run first
-result = calculate(10)
-# This line is evaluated and compared
-result.value  # expect: 42
-```
-
-### Error Assertions
-
-```py
-statement  # error: [code]
-statement  # error: "message substring"  
-statement  # error: [code] "message substring"
-```
-
-### Matchers
-
-For non-exact comparisons:
-
-```py
-pi_value()  # expect: approx(3.14159, tol=0.0001)
-output      # expect: contains("success")
-text        # expect: matches(/^Error: \d+/)
-```
-
-### CLI/Shell Tests
-
-```sh
-mycommand --bad-flag
-# exit: 1
-# stderr: contains("[invalid-flag]")
-```
+**For complete syntax details** including matchers, CLI tests, and language-specific formats, see **[Assertion Syntax Reference](references/assertion-syntax.md)**.
 
 ---
 

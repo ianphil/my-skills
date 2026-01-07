@@ -13,13 +13,62 @@ Without tests:
 
 ## The Solution
 
-Create a **layered test suite** that captures:
+Create **two parallel test suites** that work together:
+
+### Source Language Tests (e.g., PowerShell)
+- Written first to capture the original behavior
+- Serve as the **source of truth** for intent and requirements
+- Help you understand what the original code does
+- Use source language syntax (```ps1 or ```powershell code blocks)
+
+### Target Language Tests (e.g., bash)
+- Mirror the source tests with identical intent and assertions
+- Use target language syntax (```bash code blocks)
+- Validate that the ported implementation achieves the same outcomes
+- These are what you'll run against your bash implementation
+
+**Both test suites** capture the same layered requirements:
 1. **Intent** — What outcomes should the code produce?
 2. **Contracts** — What are the inputs/outputs of each function?
 3. **Integration** — How do functions work together?
 4. **Implementation** — What patterns does the code use?
 
-The tests are written in the **target language** but describe behavior that's **language-agnostic**.
+The intent is **language-agnostic**, but the test syntax must match the implementation language being tested.
+
+---
+
+## Complete Porting Workflow
+
+Here's the recommended sequence when porting from Language A (PowerShell) to Language B (bash):
+
+1. **Create Source Language Tests** (PowerShell tests with ```ps1 blocks)
+   - Capture the behavior of the original implementation
+   - Establish the source of truth for intent
+   - Validate against the original PowerShell script if possible
+
+2. **Port Tests to Target Language** (Convert to bash tests with ```bash blocks)
+   - Mirror each PowerShell test with equivalent bash syntax
+   - Keep the same intent, assertions, and test structure
+   - Use the assertion syntax reference for target language
+
+3. **Set Up Target Language Test Runner**
+   - Copy the appropriate runner: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.sh" tests/`
+   - Or use PowerShell runner which supports both: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" tests/`
+
+4. **Port the Implementation**
+   - Write the bash implementation guided by the bash tests
+   - Run bash tests frequently: `bash tests/run_tests.sh` or `pwsh tests/run_tests.ps1`
+   - Use test failures to guide implementation
+
+5. **Validate the Port**
+   - All bash tests should pass
+   - Compare behavior with original
+   - Verify external side effects match
+
+**Why both test suites?**
+- PowerShell tests validate your understanding of the original
+- Bash tests validate your ported implementation
+- Without both, you can't verify the port preserves behavior
 
 ---
 
@@ -918,9 +967,17 @@ spec-tests/
 
 ---
 
-## Phase 5: Write the Port
+## Phase 5: Port the Tests to Target Language
 
-With tests in place, write the bash implementation:
+**CRITICAL:** Before porting the implementation, port the tests first. You need bash tests to validate your bash implementation.
+
+See "Phase 5b: Porting Tests Between Languages" below for the complete process of converting PowerShell test syntax to bash test syntax while preserving intent.
+
+---
+
+## Phase 6: Write the Port
+
+With **bash tests** in place, write the bash implementation:
 
 ### 1. Start with Function Stubs
 
@@ -964,15 +1021,95 @@ Unit tests pass but integration fails? Check data flow between functions.
 
 ## Phase 5b: Porting Tests Between Languages
 
-Sometimes you're not just porting code—you also need to port existing tests from Language A to Language B (e.g., pytest tests to literate markdown tests, or Jest tests to bash).
+**ESSENTIAL STEP:** When porting code using literate tests, you MUST port the tests alongside the code. You'll have two test suites:
+- PowerShell tests (source of truth for understanding the original)
+- Bash tests (validation for your bash implementation)
+
+This phase shows how to convert test syntax from one language to another while preserving intent.
 
 ### When This Applies
 
+**Always applies when:**
+- Porting code with literate tests from Language A to Language B
+- You created PowerShell tests and now need bash tests
+- Both test suites test the same behavior in different syntax
+
+**Also applies when:**
 - Original code has tests in a language-specific framework (pytest, Jest, xUnit)
-- You want tests in the target language for the ported code
-- You're migrating from one test framework to another
+- You're migrating from traditional test frameworks to literate tests
 
 ### Step 1: Extract Language-Agnostic Assertions
+
+Strip away language-specific syntax to find the core contract.
+
+**From PowerShell literate tests:**
+```markdown
+### Normalizes Environment Name
+
+\`\`\`powershell
+$envName = "MYENV"
+$normalized = $envName.ToLower()
+Write-Output $normalized
+# expect: myenv
+\`\`\`
+
+### Rejects Reserved Keywords
+
+\`\`\`powershell
+$envName = "devlocal"
+if ($envName -match "(dev|local|ppe|prod)") {
+    throw [ValidationError]::new("reserved-keyword", "Contains reserved word")
+}
+# error: [reserved-keyword]
+\`\`\`
+```
+
+**Extracted contracts:**
+```
+Test: normalizes_environment_name
+  Input: "MYENV"
+  Expected output: "myenv"
+
+Test: rejects_reserved_keywords
+  Input: "devlocal"
+  Expected error: [reserved-keyword]
+```
+
+**To bash literate tests:**
+```markdown
+### Normalizes Environment Name
+
+\`\`\`bash
+env_name="MYENV"
+normalized=$(echo "$env_name" | tr '[:upper:]' '[:lower:]')
+echo "$normalized"
+# expect: myenv
+\`\`\`
+
+### Rejects Reserved Keywords
+
+\`\`\`bash
+env_name="devlocal"
+if [[ "$env_name" =~ (dev|local|ppe|prod) ]]; then
+    echo "[reserved-keyword]" >&2
+    exit 1
+fi
+# stderr: [reserved-keyword]
+# exit: 1
+\`\`\`
+```
+
+**Key differences:**
+- Code block language: ```powershell → ```bash
+- Variable syntax: `$envName` → `env_name` (bash convention)
+- String methods: `.ToLower()` → `tr '[:upper:]' '[:lower:]'`
+- Regex matching: `-match` → `=~`
+- Error handling: PowerShell exceptions → exit codes + stderr
+- Assertions: Same format (`# expect:`, `# error:`) but bash also uses `# exit:` and `# stderr:`
+
+---
+
+**For traditional framework tests:**
 
 Strip away framework syntax to find the core contract:
 
@@ -1104,7 +1241,7 @@ Some test features don't translate directly:
 
 ---
 
-## Phase 6: Validate the Port
+## Phase 7: Validate the Port
 
 Passing tests verify *mechanics*. This phase verifies *intent*—that the port actually achieves what users need.
 
@@ -1311,27 +1448,40 @@ Creates Service Bus namespace.
 Before starting a port:
 
 - [ ] Analyzed original code structure (components, functions, dependencies)
-- [ ] Created `component-intents.md` with outcomes for each component
-- [ ] Created `function-contracts.md` with I/O specs for each function
-- [ ] Created `integration-flow.md` with multi-step workflow tests
-- [ ] Created implementation pattern tests for target language
+- [ ] Created **PowerShell tests** (```ps1 blocks) to capture original behavior
+  - [ ] `component-intents.md` with outcomes for each component
+  - [ ] `function-contracts.md` with I/O specs for each function
+  - [ ] `integration-flow.md` with multi-step workflow tests
+  - [ ] Implementation pattern tests
+- [ ] Validated PowerShell tests against original implementation (if possible)
 - [ ] Created mocks for all external dependencies
-- [ ] Test runner supports both source and target languages
-- [ ] All tests pass against original implementation (if possible)
+- [ ] Set up PowerShell test runner: `cp run_tests.ps1 tests/`
 
-During the port:
+During test porting:
+
+- [ ] **Ported tests to bash** (```bash blocks) with same intent
+  - [ ] All component-intents tests converted
+  - [ ] All function-contracts tests converted
+  - [ ] All integration-flow tests converted
+  - [ ] All implementation pattern tests converted
+- [ ] Set up bash test runner: bash runner or PowerShell runner with bash support
+- [ ] Verified test count matches (PowerShell test count = bash test count)
+
+During implementation porting:
 
 - [ ] Implement one function at a time
-- [ ] Run tests after each function
+- [ ] Run **bash tests** after each function
 - [ ] Use test failures as implementation guide
 - [ ] Check integration tests after unit tests pass
 
 After the port:
 
-- [ ] All tests pass
-- [ ] Compared behavior with original
-- [ ] Verified external side effects match
+- [ ] All **bash tests** pass (validates bash implementation)
+- [ ] Bash test output matches expectations
+- [ ] Compared bash behavior with original PowerShell behavior
+- [ ] Verified external side effects match (Service Bus, files, env vars, etc.)
 - [ ] Documented any intentional behavioral differences
+- [ ] Both test suites maintained for future reference
 
 ---
 
