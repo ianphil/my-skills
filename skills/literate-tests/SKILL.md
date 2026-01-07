@@ -3,18 +3,23 @@ name: literate-tests
 description: >
   This skill should be used when the user asks to "create literate tests",
   "generate markdown tests", "specification-as-tests", "TDD with markdown",
-  "agent-driven testing", or mentions test suites where markdown IS the test format.
-  NOT for pytest/jest/unittest. Creates .md test files with inline assertions
-  and uses a bundled custom test runner.
+  "agent-driven testing", "port code to another language", or mentions test 
+  suites where markdown IS the test format. NOT for pytest/jest/unittest. 
+  Creates .md test files with inline assertions and uses a bundled custom 
+  test runner. Includes cookbook for porting code between languages.
 license: MIT
 metadata:
   author: Ian
-  version: "2.4"
+  version: "2.5"
 ---
 
 # Literate Test Suite Generator
 
 Create a test suite for **[DOMAIN]** that an agent can run autonomously.
+
+> **Porting Code?** If your goal is to port code from one language to another (e.g., PowerShell → bash),
+> see the **[Porting Code Cookbook](cookbooks/creating-tests-for-porting-code.md)** for a comprehensive
+> guide on creating layered test suites that define the contract both implementations must satisfy.
 
 ## What This Pattern Produces
 
