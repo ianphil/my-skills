@@ -41,26 +41,35 @@ The intent is **language-agnostic**, but the test syntax must match the implemen
 
 Here's the recommended sequence when porting from Language A (PowerShell) to Language B (bash):
 
-1. **Create Source Language Tests** (PowerShell tests with ```ps1 blocks)
+1. **Set Up Test Directory Structure**
+   - Create `spec-tests-{thing-you-are-porting}/` (e.g., `spec-tests-dev-setup/`)
+   - Create language subdirectories: `powershell/` and `bash/`
+   - Create shared `mocks/` directory
+
+2. **Create Source Language Tests** (PowerShell tests with ```ps1 blocks)
+   - Write tests in `spec-tests-{thing}/powershell/`
    - Capture the behavior of the original implementation
    - Establish the source of truth for intent
    - Validate against the original PowerShell script if possible
 
-2. **Port Tests to Target Language** (Convert to bash tests with ```bash blocks)
-   - Mirror each PowerShell test with equivalent bash syntax
+3. **Port Tests to Target Language** (Convert to bash tests with ```bash blocks)
+   - Write mirrored tests in `spec-tests-{thing}/bash/`
    - Keep the same intent, assertions, and test structure
    - Use the assertion syntax reference for target language
+   - Verify test count matches between both directories
 
-3. **Set Up Target Language Test Runner**
-   - Copy the appropriate runner: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.sh" tests/`
-   - Or use PowerShell runner which supports both: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" tests/`
+4. **Set Up Test Runners**
+   - Copy PowerShell runner: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.ps1" spec-tests-{thing}/powershell/`
+   - Copy bash runner: `cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests.sh" spec-tests-{thing}/bash/`
+   - Or use PowerShell runner in both (supports both languages)
+   - Ensure both runners reference `../mocks/` for shared mocks
 
-4. **Port the Implementation**
+5. **Port the Implementation**
    - Write the bash implementation guided by the bash tests
-   - Run bash tests frequently: `bash tests/run_tests.sh` or `pwsh tests/run_tests.ps1`
+   - Run bash tests frequently: `bash spec-tests-{thing}/bash/run_tests.sh`
    - Use test failures to guide implementation
 
-5. **Validate the Port**
+6. **Validate the Port**
    - All bash tests should pass
    - Compare behavior with original
    - Verify external side effects match
@@ -69,6 +78,7 @@ Here's the recommended sequence when porting from Language A (PowerShell) to Lan
 - PowerShell tests validate your understanding of the original
 - Bash tests validate your ported implementation
 - Without both, you can't verify the port preserves behavior
+- Same filenames in both directories make side-by-side comparison easy
 
 ---
 
@@ -173,9 +183,9 @@ The exact count depends on script complexity, but aim for **comprehensive covera
 
 ## Phase 3: Create Mocks for External Dependencies
 
-Create `mocks/` directory with executable scripts that mimic CLI behavior. Use `export PATH="$(pwd)/mocks:$PATH"` in tests.
+Create shared `spec-tests-{thing}/mocks/` directory with executable scripts that mimic CLI behavior. Both PowerShell and bash tests will reference these using `../mocks/`.
 
-**CLI Mock Example** (mocks/az):
+**CLI Mock Example** (spec-tests-dev-setup/mocks/az):
 ```bash
 #!/bin/bash
 cmd="$1"; shift
@@ -186,6 +196,17 @@ case "$cmd" in
 esac
 ```
 
+**In tests, reference shared mocks:**
+```bash
+# In bash tests: spec-tests-{thing}/bash/*.md
+export PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/../mocks" && pwd):$PATH"
+```
+
+```powershell
+# In PowerShell tests: spec-tests-{thing}/powershell/*.md
+$env:PATH = "$(Resolve-Path ../mocks);$env:PATH"
+```
+
 **Control with env vars:**
 ```bash
 # In mock: if [[ "${MOCK_VNET_EXISTS:-true}" == "true" ]]; then echo '{"name": "vnet"}'; fi
@@ -194,7 +215,7 @@ esac
 
 **Other mock types:**
 - HTTP: `mocks/curl` with case on URL patterns
-- Database: JSON fixtures in `/tmp/test_db/`, query with `jq`
+- Database: JSON fixtures in `mocks/fixtures/`, query with `jq`
 - Filesystem: `mktemp -d` with expected structure in setup/teardown functions
 - API responses: Store complex JSON in `mocks/responses/` and `cat` them
 
@@ -202,40 +223,62 @@ esac
 
 ## Phase 4: Test File Organization
 
-Organize tests by abstraction level and category:
+Organize tests by language with shared mocks:
 
 ```
-spec-tests/
-├── run_tests.ps1              # Test runner (supports bash + powershell)
+spec-tests-dev-setup/          # Root: spec-tests-{thing-you-are-porting}
 │
-├── # Layer 1: Intent (highest abstraction)
-├── component-intents.md       # What outcomes should be achieved
+├── powershell/                # Source language tests (```ps1 blocks)
+│   ├── run_tests.ps1          # PowerShell test runner
+│   │
+│   ├── # Layer 1: Intent (highest abstraction)
+│   ├── component-intents.md   # What outcomes should be achieved
+│   │
+│   ├── # Layer 2: Contracts
+│   ├── function-contracts.md  # Input/output per function
+│   │
+│   ├── # Layer 3: Integration
+│   ├── integration-flow.md    # Multi-function workflows
+│   │
+│   ├── # Layer 4: Implementation patterns
+│   ├── azure-cli-integration.md   # az command patterns
+│   ├── dotnet-cli.md          # dotnet command patterns
+│   ├── dev-tunnel.md          # devtunnel patterns
+│   ├── file-system.md         # Path and file operations
+│   ├── environment-variables.md   # Env var handling
+│   ├── error-handling.md      # Exit codes and errors
+│   ├── script-execution.md    # Subprocess and script calls
+│   └── user-interaction.md    # Prompts and output
 │
-├── # Layer 2: Contracts
-├── function-contracts.md      # Input/output per function
+├── bash/                      # Target language tests (```bash blocks)
+│   ├── run_tests.sh           # Bash test runner (or run_tests.ps1)
+│   │
+│   ├── # Same structure as powershell/ directory
+│   ├── component-intents.md   # Mirrored tests with bash syntax
+│   ├── function-contracts.md
+│   ├── integration-flow.md
+│   ├── azure-cli-integration.md
+│   ├── dotnet-cli.md
+│   ├── dev-tunnel.md
+│   ├── file-system.md
+│   ├── environment-variables.md
+│   ├── error-handling.md
+│   ├── script-execution.md
+│   └── user-interaction.md
 │
-├── # Layer 3: Integration
-├── integration-flow.md        # Multi-function workflows
-│
-├── # Layer 4: Implementation patterns
-├── azure-cli-integration.md   # az command patterns
-├── dotnet-cli.md              # dotnet command patterns
-├── dev-tunnel.md              # devtunnel patterns
-├── file-system.md             # Path and file operations
-├── environment-variables.md   # Env var handling
-├── error-handling.md          # Exit codes and errors
-├── script-execution.md        # Subprocess and script calls
-├── user-interaction.md        # Prompts and output
-│
-├── # Original code analysis
-├── dev-setup.md               # Core script logic tests
-├── components.md              # Component configuration tests
-│
-└── mocks/                     # Mock external tools
-    ├── az
+└── mocks/                     # Shared mock external tools
+    ├── az                     # Both test suites reference ../mocks/
     ├── dotnet
-    └── devtunnel
+    ├── devtunnel
+    ├── fixtures/              # Shared test data
+    └── responses/             # Shared API response fixtures
 ```
+
+**Benefits:**
+- Same filenames in both directories enable easy comparison: `diff powershell/function-contracts.md bash/function-contracts.md`
+- Shared mocks reduce duplication
+- Clear separation of source vs target language tests
+- Scalable: add `python/`, `ruby/`, etc. for additional ports
 
 ---
 
@@ -249,7 +292,7 @@ See "Phase 5b: Porting Tests Between Languages" below for the complete process o
 
 ## Phase 6: Write the Port
 
-With **bash tests** in place, write the bash implementation:
+With **bash tests** in place (in `spec-tests-{thing}/bash/`), write the bash implementation:
 
 ### 1. Start with Function Stubs
 
@@ -272,9 +315,13 @@ build_project_config() {
 
 ### 2. Implement One Function at a Time
 
-Run tests after each function:
+Run bash tests after each function:
 ```bash
-pwsh spec-tests/run_tests.ps1
+# From project root
+bash spec-tests-dev-setup/bash/run_tests.sh
+
+# Or if using PowerShell runner
+pwsh spec-tests-dev-setup/bash/run_tests.ps1
 ```
 
 ### 3. Use Test Failures as a Guide
@@ -283,11 +330,21 @@ Test output tells you exactly what's wrong:
 ```
 ✗ Normalizes To Lowercase
     Expected 'ianphil', got 'IANPHIL'
+    File: spec-tests-dev-setup/bash/function-contracts.md
 ```
 
 ### 4. Integration Tests Catch Composition Bugs
 
 Unit tests pass but integration fails? Check data flow between functions.
+
+### 5. Compare with PowerShell Tests
+
+Verify your understanding by comparing test files:
+```bash
+diff spec-tests-dev-setup/powershell/function-contracts.md \
+     spec-tests-dev-setup/bash/function-contracts.md
+```
+Differences should only be in code block language and syntax, not intent.
 
 ---
 
@@ -488,14 +545,20 @@ Both test suites should:
 
 **Automated check:**
 ```bash
-# Count tests in original
+# When porting from PowerShell to bash (both using literate tests)
+ps_count=$(grep -c "^### " spec-tests-dev-setup/powershell/*.md 2>/dev/null | awk -F: '{sum+=$2} END {print sum}')
+bash_count=$(grep -c "^### " spec-tests-dev-setup/bash/*.md 2>/dev/null | awk -F: '{sum+=$2} END {print sum}')
+
+echo "PowerShell tests: $ps_count"
+echo "Bash tests: $bash_count"
+[ "$ps_count" -eq "$bash_count" ] && echo "✓ Test counts match"
+
+# When porting from traditional framework (e.g., pytest) to literate tests
 pytest_count=$(grep -c "def test_" tests/test_original.py)
+markdown_count=$(grep -c "^### " spec-tests-dev-setup/bash/*.md 2>/dev/null | awk -F: '{sum+=$2} END {print sum}')
 
-# Count tests in ported
-markdown_count=$(grep -c "^### " spec-tests/*.md)
-
-echo "Original: $pytest_count tests"
-echo "Ported: $markdown_count tests"
+echo "Original (pytest): $pytest_count tests"
+echo "Ported (literate): $markdown_count tests"
 [ "$pytest_count" -eq "$markdown_count" ] && echo "✓ Counts match"
 ```
 
@@ -508,7 +571,7 @@ Some test features don't translate directly:
 | `@pytest.fixture` | Setup code block at start of test |
 | `@pytest.mark.parametrize` | Multiple test cases with different inputs |
 | `beforeEach`/`afterEach` | Explicit setup/teardown in each block |
-| Mock libraries | Mock scripts in `mocks/` directory |
+| Mock libraries | Mock scripts in `spec-tests-{thing}/mocks/` directory (shared between both test suites) |
 | Test coverage | Not applicable (tests ARE the spec) |
 
 ---
@@ -517,12 +580,25 @@ Some test features don't translate directly:
 
 All bash tests should pass. Then verify the port achieves the same outcomes as the original.
 
+### Running Both Test Suites
+
+```bash
+# Run PowerShell tests (validate understanding of original)
+pwsh spec-tests-dev-setup/powershell/run_tests.ps1
+
+# Run bash tests (validate ported implementation)
+bash spec-tests-dev-setup/bash/run_tests.sh
+```
+
+### Validation Techniques
+
 | Validation Technique | How | Example |
 |---------------------|-----|---------|
 | **Golden Output** | Capture stdout/stderr from both, strip timestamps, diff | `pwsh original.ps1 2>&1 \| grep -v "^\[" > expected.txt`<br>`bash port.sh 2>&1 \| grep -v "^\[" > actual.txt`<br>`diff expected.txt actual.txt` |
 | **Side Effect Verification** | Script that checks external state after run | `verify_service_bus()` checks topic exists<br>`verify_user_secrets()` checks secrets set |
 | **Smoke Tests** | Can downstream consumers actually use it? | `az servicebus send` succeeds<br>`curl $TUNNEL_URL/health` returns ok |
 | **Behavioral Parity Checklist** | Manual checks for hard-to-automate behaviors | Same resources in cloud, files locally, env vars, error helpfulness, Ctrl+C cleanup |
+| **Test Count Verification** | Ensure test count matches between languages | `grep -c "^### " spec-tests-dev-setup/powershell/*.md`<br>`grep -c "^### " spec-tests-dev-setup/bash/*.md` |
 
 ---
 
@@ -542,41 +618,50 @@ All bash tests should pass. Then verify the port achieves the same outcomes as t
 
 Before starting a port:
 
+- [ ] Set up directory structure
+  - [ ] Created `spec-tests-{thing}/` root directory
+  - [ ] Created `spec-tests-{thing}/powershell/` subdirectory
+  - [ ] Created `spec-tests-{thing}/bash/` subdirectory
+  - [ ] Created `spec-tests-{thing}/mocks/` subdirectory
 - [ ] Analyzed original code structure (components, functions, dependencies)
-- [ ] Created **PowerShell tests** (```ps1 blocks) to capture original behavior
+- [ ] Created **PowerShell tests** (```ps1 blocks) in `spec-tests-{thing}/powershell/`
   - [ ] `component-intents.md` with outcomes for each component
   - [ ] `function-contracts.md` with I/O specs for each function
   - [ ] `integration-flow.md` with multi-step workflow tests
-  - [ ] Implementation pattern tests
+  - [ ] Implementation pattern tests (azure-cli-integration.md, file-system.md, etc.)
 - [ ] Validated PowerShell tests against original implementation (if possible)
-- [ ] Created mocks for all external dependencies
-- [ ] Set up PowerShell test runner: `cp run_tests.ps1 tests/`
+- [ ] Created shared mocks in `spec-tests-{thing}/mocks/`
+- [ ] Set up PowerShell test runner: `cp run_tests.ps1 spec-tests-{thing}/powershell/`
 
 During test porting:
 
-- [ ] **Ported tests to bash** (```bash blocks) with same intent
+- [ ] **Ported tests to bash** (```bash blocks) in `spec-tests-{thing}/bash/`
   - [ ] All component-intents tests converted
   - [ ] All function-contracts tests converted
   - [ ] All integration-flow tests converted
   - [ ] All implementation pattern tests converted
-- [ ] Set up bash test runner: bash runner or PowerShell runner with bash support
-- [ ] Verified test count matches (PowerShell test count = bash test count)
+- [ ] Set up bash test runner in `spec-tests-{thing}/bash/`
+- [ ] Ensured both test suites reference `../mocks/` for shared mocks
+- [ ] Verified test count matches: `diff <(ls powershell/) <(ls bash/)`
+- [ ] Verified filenames match between `powershell/` and `bash/` directories
 
 During implementation porting:
 
 - [ ] Implement one function at a time
-- [ ] Run **bash tests** after each function
+- [ ] Run **bash tests** after each function: `bash spec-tests-{thing}/bash/run_tests.sh`
 - [ ] Use test failures as implementation guide
 - [ ] Check integration tests after unit tests pass
+- [ ] Compare with PowerShell tests when stuck: `diff spec-tests-{thing}/powershell/X.md spec-tests-{thing}/bash/X.md`
 
 After the port:
 
 - [ ] All **bash tests** pass (validates bash implementation)
+- [ ] All **PowerShell tests** still pass (validates understanding of original)
 - [ ] Bash test output matches expectations
 - [ ] Compared bash behavior with original PowerShell behavior
 - [ ] Verified external side effects match (Service Bus, files, env vars, etc.)
 - [ ] Documented any intentional behavioral differences
-- [ ] Both test suites maintained for future reference
+- [ ] Both test suites maintained in version control for future reference
 
 ---
 
