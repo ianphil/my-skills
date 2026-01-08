@@ -89,6 +89,83 @@ This pattern enabled Simon Willison to port an entire HTML5 parser in 4.5 hoursâ
 
 ---
 
+## Red/Green TDD Requirement
+
+> **CRITICAL:** Tests MUST actually test the real script/module, not self-contained snippets.
+
+Tests should **fail (red)** when:
+- The implementation doesn't exist
+- The implementation has bugs
+- The implementation behavior doesn't match the assertion
+
+Tests should **pass (green)** only when:
+- The implementation exists AND
+- The implementation behaves correctly
+
+### Wrong: Self-Contained Snippets (Don't Do This)
+
+```markdown
+### Normalizes to lowercase
+\`\`\`bash
+# This tests bash itself, NOT your script!
+input="HELLO"
+echo "$input" | tr '[:upper:]' '[:lower:]'
+# expect: hello
+\`\`\`
+```
+
+This passes regardless of whether your script exists or works.
+
+### Correct: Test the Actual Implementation
+
+```markdown
+### Normalizes to lowercase
+\`\`\`bash
+# Source the actual script being tested
+source "../../tools/scripts/my-script.sh" --source-only
+
+# Call the real function
+result=$(normalize_input "HELLO")
+echo "$result"
+# expect: hello
+\`\`\`
+```
+
+This **fails** until `my-script.sh` exists with a working `normalize_input` function.
+
+### Script Sourcing Patterns
+
+**Bash** - Use `--source-only` flag pattern:
+```bash
+# In test file
+source "$(dirname "${BASH_SOURCE[0]}")/../../path/to/script.sh" --source-only
+
+# In script being tested (at bottom)
+if [[ "${1:-}" != "--source-only" ]]; then
+    main "$@"
+fi
+```
+
+**PowerShell** - Dot-source the script:
+```powershell
+. "$PSScriptRoot/../../path/to/script.ps1"
+```
+
+**Python** - Import the module:
+```python
+from mypackage.module import function_under_test
+```
+
+### For Porting: Both Test Suites Must Test Real Implementations
+
+When porting from Language A to Language B:
+1. **PowerShell tests** source and test the original `.ps1` script
+2. **Bash tests** source and test the ported `.sh` script
+3. Both should **fail** if their respective implementation is missing/broken
+4. Both should **pass** when their implementation is correct
+
+---
+
 ## Living Documentation Through Intent
 
 Tests = executable docs that stay accurate (lies fail CI). Each test answers: **"What can the user now do?"**

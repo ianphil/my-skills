@@ -20,12 +20,14 @@ Create **two parallel test suites** that work together:
 - Serve as the **source of truth** for intent and requirements
 - Help you understand what the original code does
 - Use source language syntax (```ps1 or ```powershell code blocks)
+- **MUST source/import the actual script and test its real functions**
 
 ### Target Language Tests (e.g., bash)
 - Mirror the source tests with identical intent and assertions
 - Use target language syntax (```bash code blocks)
 - Validate that the ported implementation achieves the same outcomes
 - These are what you'll run against your bash implementation
+- **MUST source/import the actual script and test its real functions**
 
 **Both test suites** capture the same layered requirements:
 1. **Intent** — What outcomes should the code produce?
@@ -34,6 +36,69 @@ Create **two parallel test suites** that work together:
 4. **Implementation** — What patterns does the code use?
 
 The intent is **language-agnostic**, but the test syntax must match the implementation language being tested.
+
+---
+
+## Red/Green TDD Requirement
+
+> **CRITICAL:** Tests MUST test the actual script, not self-contained code snippets.
+
+The purpose of these tests is **red/green TDD**:
+- **Red:** Tests fail when the implementation is missing or broken
+- **Green:** Tests pass only when the implementation is correct
+
+### Wrong: Self-Contained Snippets
+
+```markdown
+### Formats skip steps correctly
+\`\`\`bash
+# This does NOT test your script - it tests bash itself!
+declare -a skip_steps=("step1")
+for step in "${skip_steps[@]}"; do
+    echo "steps($step)"
+done
+# expect: steps(step1)
+\`\`\`
+```
+
+This test passes even if your script doesn't exist. **Useless for TDD.**
+
+### Correct: Test the Real Implementation
+
+```markdown
+### Formats skip steps correctly
+\`\`\`bash
+# Source the actual script being ported
+source "$(dirname "${BASH_SOURCE[0]}")/../../tools/scripts/setup-ev2-deployment.sh" --source-only
+
+# Test the real function from the script
+format_except_params
+echo "${except_component[0]}"
+# expect: steps(step1)
+\`\`\`
+```
+
+This test **fails** until `setup-ev2-deployment.sh` exists with a working `format_except_params` function.
+
+### Script Sourcing Patterns
+
+For scripts to be testable, they need a "source-only" mode that loads functions without executing `main()`:
+
+**Bash pattern:**
+```bash
+# At bottom of script being tested
+if [[ "${1:-}" != "--source-only" ]]; then
+    main "$@"
+fi
+```
+
+**PowerShell pattern:**
+```powershell
+# At bottom of script being tested  
+if ($MyInvocation.InvocationName -ne '.') {
+    Main
+}
+```
 
 ---
 
@@ -48,14 +113,16 @@ Here's the recommended sequence when porting from Language A (PowerShell) to Lan
 
 2. **Create Source Language Tests** (PowerShell tests with ```ps1 blocks)
    - Write tests in `spec-tests-{thing}/powershell/`
+   - **Tests MUST source the original .ps1 script**
    - Capture the behavior of the original implementation
    - Establish the source of truth for intent
-   - Validate against the original PowerShell script if possible
+   - Run tests to verify they pass against the original script
 
 3. **Port Tests to Target Language** (Convert to bash tests with ```bash blocks)
    - Write mirrored tests in `spec-tests-{thing}/bash/`
+   - **Tests MUST source the target .sh script (which doesn't exist yet)**
    - Keep the same intent, assertions, and test structure
-   - Use the assertion syntax reference for target language
+   - **Tests should FAIL initially (red)** - the bash script doesn't exist!
    - Verify test count matches between both directories
 
 4. **Set Up Test Runners**
@@ -64,13 +131,16 @@ Here's the recommended sequence when porting from Language A (PowerShell) to Lan
    - Or use PowerShell runner in both (supports both languages)
    - Ensure both runners reference `../mocks/` for shared mocks
 
-5. **Port the Implementation**
-   - Write the bash implementation guided by the bash tests
-   - Run bash tests frequently: `bash spec-tests-{thing}/bash/run_tests.sh`
-   - Use test failures to guide implementation
+5. **Port the Implementation (TDD)**
+   - Create stub bash script with empty functions
+   - Run bash tests - **they should fail (red)**
+   - Implement one function at a time
+   - Run tests after each function - **watch them turn green**
+   - Continue until all tests pass
 
 6. **Validate the Port**
-   - All bash tests should pass
+   - All bash tests should pass (green)
+   - All PowerShell tests should still pass
    - Compare behavior with original
    - Verify external side effects match
 
