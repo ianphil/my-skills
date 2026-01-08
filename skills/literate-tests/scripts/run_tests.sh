@@ -133,11 +133,11 @@ run_test() {
 
     if $passed; then
         echo -e "  ${GREEN}✓${NC} $test_name"
-        ((TOTAL_PASSED++))
+        TOTAL_PASSED=$((TOTAL_PASSED + 1))
     else
         echo -e "  ${RED}✗${NC} $test_name"
         echo "      $fail_message"
-        ((TOTAL_FAILED++))
+        TOTAL_FAILED=$((TOTAL_FAILED + 1))
     fi
 }
 
@@ -161,7 +161,7 @@ process_file() {
     local line_num=0
 
     while IFS= read -r line || [[ -n "$line" ]]; do
-        ((line_num++))
+        line_num=$((line_num + 1))
 
         # Track section headers
         if [[ "$line" =~ ^##[[:space:]](.+)$ ]]; then
