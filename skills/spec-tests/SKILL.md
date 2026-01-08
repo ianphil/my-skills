@@ -1,7 +1,7 @@
 ---
-name: literate-tests
+name: spec-tests
 description: >
-  This skill should be used when the user asks to "create literate tests",
+  This skill should be used when the user asks to "create spec tests",
   "generate markdown tests", "specification-as-tests", "TDD with markdown",
   "agent-driven testing", "port code to another language", or mentions test
   suites where markdown IS the test format. NOT for pytest/jest/unittest.
@@ -9,7 +9,7 @@ description: >
   test runner. Includes cookbook for porting code between languages.
 ---
 
-# Literate Test Suite Generator
+# Spec Test Suite Generator
 
 Create a test suite for **[DOMAIN]** that an agent can run autonomously.
 
@@ -366,7 +366,7 @@ celsius_to_fahrenheit(-300)  # error: [below-absolute-zero]
 
 ## Checklist Before Generating
 
-When asked to create literate tests:
+When asked to create spec tests:
 
 - [ ] Identify target language and copy appropriate runner from `${CLAUDE_PLUGIN_ROOT}/scripts/`
 - [ ] Create `.md` files in `tests/`, NOT language-specific test files

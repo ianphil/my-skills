@@ -1,6 +1,6 @@
 # Cookbook: Creating Tests for Porting Code
 
-This cookbook describes how to use literate tests to port code from one language to another.
+This cookbook describes how to use spec tests to port code from one language to another.
 The tests become the **contract** that both implementations must satisfy.
 
 ## The Problem
@@ -420,7 +420,7 @@ Differences should only be in code block language and syntax, not intent.
 
 ## Phase 5b: Porting Tests Between Languages
 
-**ESSENTIAL STEP:** When porting code using literate tests, you MUST port the tests alongside the code. You'll have two test suites:
+**ESSENTIAL STEP:** When porting code using spec tests, you MUST port the tests alongside the code. You'll have two test suites:
 - PowerShell tests (source of truth for understanding the original)
 - Bash tests (validation for your bash implementation)
 
@@ -429,19 +429,19 @@ This phase shows how to convert test syntax from one language to another while p
 ### When This Applies
 
 **Always applies when:**
-- Porting code with literate tests from Language A to Language B
+- Porting code with spec tests from Language A to Language B
 - You created PowerShell tests and now need bash tests
 - Both test suites test the same behavior in different syntax
 
 **Also applies when:**
 - Original code has tests in a language-specific framework (pytest, Jest, xUnit)
-- You're migrating from traditional test frameworks to literate tests
+- You're migrating from traditional test frameworks to spec tests
 
 ### Step 1: Extract Language-Agnostic Assertions
 
 Strip away language-specific syntax to find the core contract.
 
-**From PowerShell literate tests:**
+**From PowerShell spec tests:**
 ```markdown
 ### Normalizes Environment Name
 
@@ -474,7 +474,7 @@ Test: rejects_reserved_keywords
   Expected error: [reserved-keyword]
 ```
 
-**To bash literate tests:**
+**To bash spec tests:**
 ```markdown
 ### Normalizes Environment Name
 
@@ -552,9 +552,9 @@ Test: validates_email_format
 
 ### Step 2: Rewrite in Target Format
 
-Convert extracted contracts to literate tests in target language:
+Convert extracted contracts to spec tests in target language:
 
-**To bash literate tests:**
+**To bash spec tests:**
 ```markdown
 ### Normalizes To Lowercase
 
@@ -578,7 +578,7 @@ fi
 \`\`\`
 ```
 
-**To Python literate tests:**
+**To Python spec tests:**
 ```markdown
 ### Normalizes To Lowercase
 
@@ -615,7 +615,7 @@ Both test suites should:
 
 **Automated check:**
 ```bash
-# When porting from PowerShell to bash (both using literate tests)
+# When porting from PowerShell to bash (both using spec tests)
 ps_count=$(grep -c "^### " spec-tests-dev-setup/powershell/*.md 2>/dev/null | awk -F: '{sum+=$2} END {print sum}')
 bash_count=$(grep -c "^### " spec-tests-dev-setup/bash/*.md 2>/dev/null | awk -F: '{sum+=$2} END {print sum}')
 
@@ -623,12 +623,12 @@ echo "PowerShell tests: $ps_count"
 echo "Bash tests: $bash_count"
 [ "$ps_count" -eq "$bash_count" ] && echo "✓ Test counts match"
 
-# When porting from traditional framework (e.g., pytest) to literate tests
+# When porting from traditional framework (e.g., pytest) to spec tests
 pytest_count=$(grep -c "def test_" tests/test_original.py)
 markdown_count=$(grep -c "^### " spec-tests-dev-setup/bash/*.md 2>/dev/null | awk -F: '{sum+=$2} END {print sum}')
 
 echo "Original (pytest): $pytest_count tests"
-echo "Ported (literate): $markdown_count tests"
+echo "Ported (spec): $markdown_count tests"
 [ "$pytest_count" -eq "$markdown_count" ] && echo "✓ Counts match"
 ```
 
