@@ -1,6 +1,6 @@
 # Assertion Syntax Reference
 
-This document provides detailed syntax for assertions in literate tests.
+This document provides detailed syntax for assertions in spec tests.
 
 ## Value Assertions
 
