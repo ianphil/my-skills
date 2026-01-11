@@ -46,9 +46,12 @@ cp "${CLAUDE_PLUGIN_ROOT}/scripts/judge_prompt.md" specs/tests/
 
 ```bash
 python specs/tests/run_tests_claude.py specs/tests/authentication.md
+python specs/tests/run_tests_claude.py specs/tests/authentication.md --test "Valid Credentials Succeed"  # Single test
 ```
 
 Uses `claude -p` (your subscription, no API key needed).
+
+**Options:** `--target FILE` (override target), `--model MODEL`, `--test "Name"` (run single test)
 
 ## Test Format
 

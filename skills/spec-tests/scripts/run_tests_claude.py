@@ -356,9 +356,10 @@ class TestRunner:
     RESET = '\033[0m'
     BOLD = '\033[1m'
 
-    def __init__(self, spec_path: Path, target_paths: list[Path], model: str = "sonnet"):
+    def __init__(self, spec_path: Path, target_paths: list[Path], model: str = "sonnet", test_filter: str = None):
         self.spec_path = spec_path
         self.target_paths = target_paths
+        self.test_filter = test_filter
         self.judge = LLMJudge(model=model)
 
     def _load_targets(self) -> tuple[str, str]:
@@ -388,6 +389,13 @@ class TestRunner:
         if not tests:
             print(f"{self.YELLOW}No tests found in {self.spec_path}{self.RESET}")
             return 0, 0
+
+        # Filter by test name if specified
+        if self.test_filter:
+            tests = [t for t in tests if t.name == self.test_filter]
+            if not tests:
+                print(f"{self.YELLOW}No test named '{self.test_filter}' found{self.RESET}")
+                return 0, 0
 
         # Format target display
         if len(self.target_paths) == 1:
@@ -443,6 +451,7 @@ def main():
     parser.add_argument("spec_path", type=Path, help="Path to spec test file or directory of .md files")
     parser.add_argument("--target", type=Path, help="Override target file (normally read from frontmatter)")
     parser.add_argument("--model", default="sonnet", help="Claude model to use (default: sonnet)")
+    parser.add_argument("--test", help="Run only the test with this name (exact match)")
 
     args = parser.parse_args()
 
@@ -480,7 +489,7 @@ def main():
         else:
             target_paths = get_targets_from_frontmatter(spec_file)
 
-        runner = TestRunner(spec_file, target_paths, model=args.model)
+        runner = TestRunner(spec_file, target_paths, model=args.model, test_filter=args.test)
         passed, total = runner.run()
         total_passed += passed
         total_tests += total

@@ -193,11 +193,19 @@ Then run tests:
 ```bash
 python specs/tests/run_tests_claude.py specs/tests/authentication.md  # Single spec
 python specs/tests/run_tests_claude.py specs/tests/                   # All specs in dir
+python specs/tests/run_tests_claude.py specs/tests/auth.md --test "Valid Credentials Succeed"  # Single test
 ```
 
 Target files are read from frontmatter—no `--target` flag needed.
 
 Uses `claude -p` (your subscription, no API key needed).
+
+**Runner options:**
+| Flag | Purpose |
+|------|---------|
+| `--target FILE` | Override frontmatter target |
+| `--model MODEL` | Claude model to use (default: sonnet) |
+| `--test "Name"` | Run only the test with this exact name |
 
 ---
 
