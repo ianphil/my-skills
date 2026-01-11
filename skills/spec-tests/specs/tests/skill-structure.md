@@ -1,5 +1,7 @@
 ---
-target: SKILL.md
+target:
+  - SKILL.md
+  - scripts/run_tests_claude.py
 ---
 # Skill Structure Requirements
 
@@ -46,6 +48,22 @@ Then it documents that:
 Because consistent structure enables reliable parsing and clear organization
 ```
 
+### Runner Parses H2/H3 Structure
+
+The runner must implement what the documentation promises. If the parser doesn't
+correctly extract H2 sections and H3 test cases, users get confusing failures
+even when their spec files follow the documented format.
+
+```
+Given the run_tests_claude.py runner
+Then it has a SpecParser class that:
+  - Tracks H2 (##) headers as section names
+  - Extracts H3 (###) headers as test case names
+  - Collects prose between H3 and code block as intent
+  - Extracts code block content as assertion
+Because the implementation must match the documented structure
+```
+
 ---
 
 ## Runner
@@ -76,6 +94,20 @@ Then it mentions that the runner uses:
   - claude -p (or "claude CLI" or similar)
   - User's subscription (not API key)
 Because users should know they don't need separate API billing to use this
+```
+
+### Runner Invokes Claude CLI
+
+The runner must actually use `claude -p` as documented. If it used the API
+directly or a different invocation method, users would need API keys despite
+the documentation saying otherwise.
+
+```
+Given the run_tests_claude.py runner
+Then the LLMJudge class invokes claude via subprocess with:
+  - "claude" as the command
+  - "-p" flag for prompt mode
+Because the implementation must match what's documented (no API key needed)
 ```
 
 ---
