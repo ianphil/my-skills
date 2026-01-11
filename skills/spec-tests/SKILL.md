@@ -81,6 +81,69 @@ specs/tests/
 
 ---
 
+## Writing Tests for Multiple Targets
+
+When a spec file targets multiple files, each test must explicitly reference which target it validates. This prevents ambiguity and catches drift between targets.
+
+**Explicit target references:**
+```markdown
+---
+target:
+  - docs/API.md
+  - src/api.py
+  - src/api_test.py
+---
+# API Validation
+
+## Error Handling
+
+### Documents Error Codes
+
+Users need to know what error codes the API returns. Without this, they
+can't write proper error handling in their applications.
+
+\`\`\`
+Given the docs/API.md file
+Then it documents error codes for:
+  - 400 Bad Request (validation errors)
+  - 401 Unauthorized (missing/invalid token)
+  - 404 Not Found (resource doesn't exist)
+Because users need this reference to handle errors correctly
+\`\`\`
+
+### Implementation Returns Documented Errors
+
+The API must return the error codes that the docs promise. If implementation
+drifts from docs, users get unexpected errors their code can't handle.
+
+\`\`\`
+Given the src/api.py file
+Then it returns the same error codes documented in API.md:
+  - 400 for validation failures
+  - 401 for auth failures
+  - 404 for missing resources
+Because implementation must match documentation
+\`\`\`
+
+### Tests Cover Error Cases
+
+Tests must verify error handling works. Without test coverage, regressions
+can ship and break user applications.
+
+\`\`\`
+Given the src/api_test.py file
+Then it has test cases for:
+  - 400 response on invalid input
+  - 401 response on bad auth
+  - 404 response on missing resource
+Because untested code is unverified code
+\`\`\`
+```
+
+**Key principle:** Start each assertion with `Given the <target> file` so the judge knows exactly which file to evaluate. When behavior spans multiple targets (docs describe it, code implements it, tests verify it), write separate tests for each—this catches drift between them.
+
+---
+
 ## Running Tests
 
 First, copy the runner files to your project (Claude will do this automatically when using the skill):
@@ -233,5 +296,6 @@ This dual evaluation catches "legal but wrong" solutions that traditional assert
 - [ ] Intent is business/user focused
 - [ ] Expected behavior is clear
 - [ ] One behavior per test case
+- [ ] Multi-target specs: each test starts with `Given the <target> file`
 
 > **Missing intent = immediate failure.** The runner rejects tests without intent prose before evaluating behavior—evaluation without intent is undefined.
