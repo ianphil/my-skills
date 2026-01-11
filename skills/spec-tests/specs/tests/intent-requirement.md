@@ -35,6 +35,21 @@ Then both use [missing-intent] as the error code for tests without intent prose
 Because error codes must match between documentation and implementation
 ```
 
+### Documents Multi-File Given Syntax
+
+When the same requirement applies to multiple files (e.g., docs and implementation
+must agree on an error code), users need to write one test that covers all files.
+Without this syntax, they'd duplicate the same test for each target.
+
+```
+Given the SKILL.md file
+Then it documents how to write tests that apply to multiple files using:
+  - Multi-file Given clause: "Given file1 and file2"
+  - Single assertion that applies to all listed files
+  - Guidance on when to use multi-file vs separate tests
+Because users need to avoid test duplication when requirements span files
+```
+
 ---
 
 ## Intent is Required
