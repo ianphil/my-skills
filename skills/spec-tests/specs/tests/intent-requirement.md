@@ -21,6 +21,22 @@ alongside the assertion.
 
 ---
 
+## Error Code Consistency
+
+### Missing Intent Error Code
+
+Users see error messages from the runner and reference the documentation to
+understand them. If docs say `[missing-intent]` but the runner outputs something
+different, users can't correlate errors to documentation.
+
+```
+Given SKILL.md and scripts/run_tests_claude.py
+Then both use [missing-intent] as the error code for tests without intent prose
+Because error codes must match between documentation and implementation
+```
+
+---
+
 ## Intent is Required
 
 ### Documents Intent Requirement

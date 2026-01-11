@@ -10,6 +10,22 @@ Tests should live in `specs/tests/` and declare their targets via frontmatter.
 
 ---
 
+## Error Code Consistency
+
+### Missing Target Error Code
+
+Users see error messages from the runner and reference the documentation to
+understand them. If docs say `[missing-target]` but the runner outputs something
+different, users can't correlate errors to documentation.
+
+```
+Given SKILL.md and scripts/run_tests_claude.py
+Then both use [missing-target] as the error code for specs without target frontmatter
+Because error codes must match between documentation and implementation
+```
+
+---
+
 ## Frontmatter Target
 
 ### Single Target Syntax is Documented
