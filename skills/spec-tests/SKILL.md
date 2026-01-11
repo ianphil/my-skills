@@ -48,11 +48,12 @@ Structure: **H2** = test group, **H3** = test case, **prose** = required intent,
 
 ## Running Tests
 
-First, copy the runner to your project (Claude will do this automatically when using the skill):
+First, copy the runner files to your project (Claude will do this automatically when using the skill):
 
 ```bash
 # CLAUDE_PLUGIN_ROOT is set automatically when Claude invokes this skill
 cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests_claude.py" tests/
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/judge_prompt.md" tests/
 ```
 
 Then run tests:

@@ -23,6 +23,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+# Prompt template file location (sibling to this script)
+JUDGE_PROMPT_FILE = Path(__file__).parent / "judge_prompt.md"
+
 
 @dataclass
 class TestCase:
@@ -115,6 +118,28 @@ class LLMJudge:
 
     def __init__(self, model: str = "sonnet"):
         self.model = model
+        self._prompt_template = self._load_prompt_template()
+
+    def _load_prompt_template(self) -> str:
+        """Load the judge prompt template from the external markdown file."""
+        if not JUDGE_PROMPT_FILE.exists():
+            raise FileNotFoundError(
+                f"Judge prompt file not found: {JUDGE_PROMPT_FILE}\n"
+                f"This file must be present alongside run_tests_claude.py"
+            )
+        return JUDGE_PROMPT_FILE.read_text()
+
+    def _render_prompt(self, test: TestCase, target_content: str, target_name: str) -> str:
+        """Substitute placeholders in the prompt template."""
+        return (
+            self._prompt_template
+            .replace("{{target_name}}", target_name)
+            .replace("{{target_content}}", target_content)
+            .replace("{{test_name}}", test.name)
+            .replace("{{test_section}}", test.section)
+            .replace("{{intent}}", test.intent)
+            .replace("{{assertion_block}}", test.assertion_block)
+        )
 
     def evaluate(self, test: TestCase, target_content: str, target_name: str) -> TestResult:
         """Evaluate a single test case against the target content."""
@@ -129,43 +154,7 @@ class LLMJudge:
                           "and the code block."
             )
 
-        prompt = f"""You are a test evaluator. Determine if a target file satisfies a test specification.
-
-## Target File: {target_name}
-
-```
-{target_content}
-```
-
-## Test to Evaluate
-
-**Test Name:** {test.name}
-**Section:** {test.section}
-
-**Intent (WHY this test matters):**
-{test.intent}
-
-**Assertion (WHAT must be true):**
-```
-{test.assertion_block}
-```
-
-## Your Task
-
-Evaluate whether the target file satisfies BOTH:
-1. The intent (the underlying reason/requirement)
-2. The assertion (the specific condition)
-
-Be strict: if the target doesn't clearly satisfy the requirement, it fails.
-
-**Error codes to use in reasoning:**
-- `[intent-violated]` — The assertion might pass literally, but the intent is not satisfied
-- Use this when the implementation "games" the test or satisfies the letter but not the spirit
-
-Respond with ONLY a JSON object, no other text:
-{{"passed": true, "reasoning": "brief explanation"}}
-or
-{{"passed": false, "reasoning": "[error-code] explanation of why it failed"}}"""
+        prompt = self._render_prompt(test, target_content, target_name)
 
         try:
             result = subprocess.run(
