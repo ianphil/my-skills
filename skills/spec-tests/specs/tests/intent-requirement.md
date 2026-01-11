@@ -23,7 +23,22 @@ alongside the assertion.
 
 ## Intent is Required
 
-### Test Blocks Must Have Intent Prose
+### Documents Intent Requirement
+
+The skill must clearly state that intent prose is mandatory for every test.
+Users need to understand this isn't optional—tests without intent cannot be
+evaluated and will fail immediately.
+
+```
+Given the SKILL.md file
+Then it documents that:
+  - Intent prose is required for every test
+  - Intent must explain WHY the test matters
+  - Missing intent causes immediate failure with [missing-intent]
+Because users must understand intent is mandatory, not optional
+```
+
+### Runner Detects Missing Intent
 
 Spec tests exist for LLM-driven development where the agent implements code to pass
 tests. Without intent, the LLM cannot distinguish "this number is arbitrary" from
@@ -44,7 +59,22 @@ And should NOT invoke the LLM
 Because there is no prose explaining WHY 50ms matters
 ```
 
-### Intent Must Appear Directly Above Code Block
+### Documents Per-Test Intent Location
+
+The skill must explain that intent belongs directly above each test's code block,
+not at the section level. Users might assume section-level prose counts—the docs
+must clarify this won't work.
+
+```
+Given the SKILL.md file
+Then it documents that:
+  - Intent prose must appear between H3 header and code block
+  - Section-level (H2) intent does not count for individual tests
+  - Each test case needs its own WHY
+Because users must know where to place intent for it to be recognized
+```
+
+### Runner Requires Per-Test Intent
 
 Intent must be immediately discoverable when reading the test. Prose in a different
 section or at the component level is not sufficient—each test needs its own "why"
@@ -180,7 +210,22 @@ Then it must check:
 And the test passes only if BOTH are true
 ```
 
-### Missing Intent Fails Before Assertion Check
+### Documents Early Failure for Missing Intent
+
+The skill must explain that missing intent causes immediate failure before
+evaluation. Users need to understand this isn't a warning—evaluation without
+intent is undefined and the runner won't attempt it.
+
+```
+Given the SKILL.md file
+Then it documents that:
+  - Missing intent causes immediate failure
+  - The assertion is not evaluated when intent is missing
+  - The error code is [missing-intent]
+Because users must understand evaluation requires intent
+```
+
+### Runner Fails Early for Missing Intent
 
 If intent is missing, the test cannot be properly evaluated. The failure should
 be reported immediately without attempting to run the assertion, because any
