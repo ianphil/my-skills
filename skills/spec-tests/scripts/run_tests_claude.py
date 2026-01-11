@@ -32,6 +32,7 @@ class TestCase:
     intent: str
     assertion_block: str
     line_number: int
+    missing_intent: bool = False  # True if test has assertion but no intent
 
 
 @dataclass
@@ -91,13 +92,16 @@ class SpecParser:
 
                 assertion_block = '\n'.join(assertion_lines).strip()
 
-                if intent and assertion_block:
+                # Include test if it has an assertion block (even without intent)
+                # Missing intent will be flagged as a failure during evaluation
+                if assertion_block:
                     tests.append(TestCase(
                         name=test_name,
                         section=current_section,
                         intent=intent,
                         assertion_block=assertion_block,
-                        line_number=test_line
+                        line_number=test_line,
+                        missing_intent=not intent
                     ))
                 continue
 
@@ -114,6 +118,16 @@ class LLMJudge:
 
     def evaluate(self, test: TestCase, target_content: str, target_name: str) -> TestResult:
         """Evaluate a single test case against the target content."""
+
+        # Fail immediately if intent is missing - don't even call the LLM
+        if test.missing_intent:
+            return TestResult(
+                test=test,
+                passed=False,
+                reasoning="[missing-intent] Test has no intent prose. Each test requires "
+                          "intent explaining WHY it matters. Add prose between the H3 header "
+                          "and the code block."
+            )
 
         prompt = f"""You are a test evaluator. Determine if a target file satisfies a test specification.
 
@@ -144,10 +158,14 @@ Evaluate whether the target file satisfies BOTH:
 
 Be strict: if the target doesn't clearly satisfy the requirement, it fails.
 
+**Error codes to use in reasoning:**
+- `[intent-violated]` — The assertion might pass literally, but the intent is not satisfied
+- Use this when the implementation "games" the test or satisfies the letter but not the spirit
+
 Respond with ONLY a JSON object, no other text:
-{{"passed": true, "reasoning": "why it passed"}}
+{{"passed": true, "reasoning": "brief explanation"}}
 or
-{{"passed": false, "reasoning": "why it failed"}}"""
+{{"passed": false, "reasoning": "[error-code] explanation of why it failed"}}"""
 
         try:
             result = subprocess.run(

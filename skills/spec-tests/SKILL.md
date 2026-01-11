@@ -42,12 +42,22 @@ Then [expected outcome]
 
 Structure: **H2** = test group, **H3** = test case, **prose** = required intent, **code block** = expected behavior.
 
+**Critical:** Intent prose must appear **directly above** the code block, between the H3 header and the assertion. Component-level or section-level prose does not substitute for per-test intent—each test needs its own WHY immediately before its code block.
+
 ---
 
 ## Running Tests
 
+First, copy the runner to your project (Claude will do this automatically when using the skill):
+
 ```bash
+# CLAUDE_PLUGIN_ROOT is set automatically when Claude invokes this skill
 cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests_claude.py" tests/
+```
+
+Then run tests:
+
+```bash
 python tests/run_tests_claude.py tests/feature.md --target src/feature.py   # Single file
 python tests/run_tests_claude.py tests/ --target src/feature.py             # All tests in dir
 ```
@@ -69,6 +79,8 @@ elapsed < 50ms  # Fails at 73ms
 ```
 LLM thinks: "50 seems arbitrary, change to 100." User gets laggy editor.
 
+The runner reports `[missing-intent]` and fails immediately—tests without intent prose cannot be evaluated.
+
 **With intent:**
 ```markdown
 ### Completes Quickly
@@ -83,14 +95,14 @@ Then it completes in under 50ms
 \`\`\`
 ```
 
-Claude-as-judge evaluates: Does it satisfy the UX requirement? Relaxing to 100ms = FAIL.
+Claude-as-judge evaluates: Does it satisfy the UX requirement? If an LLM "fixes" by relaxing the threshold to 100ms, the runner reports `[intent-violated]`—the assertion might pass literally, but the stated UX requirement is violated.
 
 **Intent properties:**
-- **Required** — Missing intent = test failure
-- **Per-test** — Each test needs its own WHY
+- **Required** — Missing intent → `[missing-intent]` failure before evaluation
+- **Per-test** — Each test needs its own WHY directly above the code block
 - **Business-focused** — Why users/product care, not technical details
-- **Preserved when porting** — Same intent applies across languages (Python → Rust)
-- **Evaluative** — Catches "legal but wrong" solutions
+- **Preserved when porting** — Same intent applies across languages (see example below)
+- **Evaluative** — Catches "legal but wrong" solutions via `[intent-violated]`
 
 ---
 
@@ -124,6 +136,56 @@ When the login is processed
 Then the error is "Invalid email or password" (not "wrong password")
 \`\`\`
 ```
+
+---
+
+## Porting Tests Across Languages
+
+Intent is preserved when porting code between languages—the business reason doesn't change, only the assertion syntax.
+
+**Python spec:**
+```markdown
+### Completes Quickly
+
+Users perceive delays over 50ms as laggy. This operation runs on every
+keystroke, so exceeding this threshold makes the editor feel unresponsive.
+
+\`\`\`python
+elapsed < 50  # expect: True
+\`\`\`
+```
+
+**Same test ported to Rust:**
+```markdown
+### Completes Quickly
+
+Users perceive delays over 50ms as laggy. This operation runs on every
+keystroke, so exceeding this threshold makes the editor feel unresponsive.
+
+\`\`\`rust
+elapsed < 50  // expect: true
+\`\`\`
+```
+
+The intent prose is identical—user perception of lag doesn't change with implementation language. Only the assertion syntax changes.
+
+---
+
+## Evaluation Model
+
+The LLM-as-judge evaluates **both** the assertion AND the intent for every test:
+
+1. **Pre-check:** If intent prose is missing, the test fails immediately with `[missing-intent]`. The assertion is not evaluated—evaluation without intent is undefined.
+
+2. **Dual evaluation:** For tests with intent, Claude checks:
+   - Does the assertion pass? (literal check)
+   - Does the implementation satisfy the intent? (semantic check)
+
+   The test passes **only if both are true**.
+
+3. **Intent violation:** If the assertion passes but the intent is violated (e.g., gaming thresholds), the test fails with `[intent-violated]`.
+
+This dual evaluation catches "legal but wrong" solutions that traditional assertion-only testing misses.
 
 ---
 
