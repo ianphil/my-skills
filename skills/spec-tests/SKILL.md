@@ -144,6 +144,40 @@ Because untested code is unverified code
 
 ---
 
+## Tests That Apply to Multiple Files
+
+When the same requirement applies to multiple targets, list them together in the `Given` clause. The judge evaluates whether ALL listed files satisfy the assertion.
+
+**Single file:**
+```markdown
+\`\`\`
+Given the docs/API.md file
+Then it documents the rate limit as 100 requests/minute
+\`\`\`
+```
+
+**Multiple files (same requirement applies to both):**
+```markdown
+\`\`\`
+Given docs/API.md and src/rate_limiter.py
+Then both specify the rate limit as 100 requests/minute
+Because documentation and implementation must agree
+\`\`\`
+```
+
+**When to use multi-file Given:**
+- Documentation and implementation must match
+- Multiple implementations of the same interface
+- Config files that must stay in sync
+- Any case where drift between files would break users
+
+**When to use separate tests:**
+- Files have different roles (one documents, one implements, one tests)
+- You need different assertions for each file
+- Failures should pinpoint exactly which file is wrong
+
+---
+
 ## Running Tests
 
 First, copy the runner files to your project (Claude will do this automatically when using the skill):
@@ -297,5 +331,6 @@ This dual evaluation catches "legal but wrong" solutions that traditional assert
 - [ ] Expected behavior is clear
 - [ ] One behavior per test case
 - [ ] Multi-target specs: each test starts with `Given the <target> file`
+- [ ] Shared requirements: use `Given <file1> and <file2>` when same test applies to multiple files
 
 > **Missing intent = immediate failure.** The runner rejects tests without intent prose before evaluating behavior—evaluation without intent is undefined.
