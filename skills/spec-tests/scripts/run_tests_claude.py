@@ -7,9 +7,20 @@ Uses `claude -p` to judge whether a target file/implementation satisfies the int
 and assertions in each test.
 
 Usage:
-    python run_tests_claude.py <spec.md> --target <file>      # Single spec file
-    python run_tests_claude.py <tests/> --target <file>       # All .md files in directory
-    python run_tests_claude.py tests/ --target SKILL.md       # Example: run all tests
+    python run_tests_claude.py specs/tests/auth.md           # Target from frontmatter
+    python run_tests_claude.py specs/tests/                  # All .md files in directory
+    python run_tests_claude.py spec.md --target file.py      # Override frontmatter target
+
+Spec files must declare target(s) in YAML frontmatter:
+    ---
+    target: src/auth.py
+    ---
+
+    ---
+    target:
+      - src/auth.py
+      - src/session.py
+    ---
 
 Requirements:
     - claude CLI installed and authenticated
@@ -17,6 +28,7 @@ Requirements:
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -25,6 +37,100 @@ from typing import Optional
 
 # Prompt template file location (sibling to this script)
 JUDGE_PROMPT_FILE = Path(__file__).parent / "judge_prompt.md"
+
+
+def parse_frontmatter(content: str) -> tuple[dict, str]:
+    """
+    Parse YAML frontmatter from markdown content.
+
+    Returns (metadata dict, content without frontmatter).
+    Frontmatter must be delimited by --- at start and end.
+    """
+    if not content.startswith('---'):
+        return {}, content
+
+    # Find the closing ---
+    end_match = re.search(r'\n---\s*\n', content[3:])
+    if not end_match:
+        return {}, content
+
+    frontmatter_text = content[3:end_match.start() + 3]
+    remaining_content = content[end_match.end() + 3:]
+
+    # Simple YAML parsing for target field (avoid yaml dependency)
+    metadata = {}
+    lines = frontmatter_text.strip().split('\n')
+    current_key = None
+    current_list = []
+
+    for line in lines:
+        # Array item
+        if line.strip().startswith('- '):
+            if current_key:
+                current_list.append(line.strip()[2:].strip())
+        # Key-value pair
+        elif ':' in line and not line.startswith(' ') and not line.startswith('\t'):
+            # Save previous list if any
+            if current_key and current_list:
+                metadata[current_key] = current_list
+                current_list = []
+
+            key, _, value = line.partition(':')
+            current_key = key.strip()
+            value = value.strip()
+            if value:
+                metadata[current_key] = value
+                current_key = None
+
+    # Save final list if any
+    if current_key and current_list:
+        metadata[current_key] = current_list
+
+    return metadata, remaining_content
+
+
+def get_targets_from_frontmatter(spec_path: Path) -> list[Path]:
+    """
+    Extract target file paths from spec file frontmatter.
+
+    Supports both single target and array syntax:
+        target: src/auth.py
+        target:
+          - src/auth.py
+          - src/session.py
+
+    Returns list of Path objects. Raises SystemExit on error.
+    """
+    content = spec_path.read_text()
+    metadata, _ = parse_frontmatter(content)
+
+    if 'target' not in metadata:
+        print(f"Error: [missing-target] No 'target:' field in frontmatter of {spec_path}")
+        print("Each spec file must declare its target(s) in frontmatter:")
+        print("---")
+        print("target: path/to/file.py")
+        print("---")
+        sys.exit(1)
+
+    target = metadata['target']
+
+    # Normalize to list
+    if isinstance(target, str):
+        targets = [target]
+    else:
+        targets = target
+
+    # Convert to Paths and validate
+    target_paths = []
+    for t in targets:
+        path = Path(t)
+        if not path.exists():
+            print(f"Error: Target file not found: {t}")
+            print(f"  (declared in {spec_path})")
+            sys.exit(1)
+        target_paths.append(path)
+
+    return target_paths
 
 
 @dataclass
@@ -51,8 +157,10 @@ class SpecParser:
     """Parses markdown spec files into test cases."""
 
     def __init__(self, content: str):
-        self.content = content
-        self.lines = content.split('\n')
+        # Strip frontmatter if present
+        _, content_without_frontmatter = parse_frontmatter(content)
+        self.content = content_without_frontmatter
+        self.lines = self.content.split('\n')
 
     def parse(self) -> list[TestCase]:
         """Extract all test cases from the spec file."""
@@ -235,17 +343,30 @@ class TestRunner:
     RESET = '\033[0m'
     BOLD = '\033[1m'
 
-    def __init__(self, spec_path: Path, target_path: Path, model: str = "sonnet"):
+    def __init__(self, spec_path: Path, target_paths: list[Path], model: str = "sonnet"):
         self.spec_path = spec_path
-        self.target_path = target_path
+        self.target_paths = target_paths
         self.judge = LLMJudge(model=model)
+
+    def _load_targets(self) -> tuple[str, str]:
+        """Load and concatenate target file contents. Returns (content, display_name)."""
+        if len(self.target_paths) == 1:
+            return self.target_paths[0].read_text(), self.target_paths[0].name
+
+        # Multiple targets - concatenate with headers
+        parts = []
+        names = []
+        for path in self.target_paths:
+            parts.append(f"# File: {path}\n\n{path.read_text()}")
+            names.append(path.name)
+        return "\n\n---\n\n".join(parts), ", ".join(names)
 
     def run(self) -> tuple[int, int]:
         """Run all tests and return (passed, total) counts."""
 
         # Load files
         spec_content = self.spec_path.read_text()
-        target_content = self.target_path.read_text()
+        target_content, target_name = self._load_targets()
 
         # Parse tests
         parser = SpecParser(spec_content)
@@ -255,9 +376,15 @@ class TestRunner:
             print(f"{self.YELLOW}No tests found in {self.spec_path}{self.RESET}")
             return 0, 0
 
+        # Format target display
+        if len(self.target_paths) == 1:
+            target_display = str(self.target_paths[0])
+        else:
+            target_display = f"{len(self.target_paths)} files: {', '.join(str(p) for p in self.target_paths)}"
+
         print(f"\n{self.BOLD}Running LLM-as-Judge Tests{self.RESET}")
         print(f"Spec: {self.spec_path}")
-        print(f"Target: {self.target_path}")
+        print(f"Target: {target_display}")
         print(f"Tests: {len(tests)}")
         print("-" * 60)
 
@@ -267,7 +394,7 @@ class TestRunner:
         for test in tests:
             print(f"\n{self.CYAN}{test.section}{self.RESET} > {test.name} ... ", end="", flush=True)
 
-            result = self.judge.evaluate(test, target_content, self.target_path.name)
+            result = self.judge.evaluate(test, target_content, target_name)
 
             if result.error:
                 status = f"{self.RED}ERROR{self.RESET}"
@@ -301,17 +428,13 @@ def main():
         description="LLM-as-Judge test runner using claude CLI"
     )
     parser.add_argument("spec_path", type=Path, help="Path to spec test file or directory of .md files")
-    parser.add_argument("--target", type=Path, required=True, help="Path to the file being tested")
+    parser.add_argument("--target", type=Path, help="Override target file (normally read from frontmatter)")
     parser.add_argument("--model", default="sonnet", help="Claude model to use (default: sonnet)")
 
     args = parser.parse_args()
 
     if not args.spec_path.exists():
         print(f"Error: Spec path not found: {args.spec_path}")
-        sys.exit(1)
-
-    if not args.target.exists():
-        print(f"Error: Target file not found: {args.target}")
         sys.exit(1)
 
     # Check claude CLI is available
@@ -335,7 +458,16 @@ def main():
     total_tests = 0
 
     for spec_file in spec_files:
-        runner = TestRunner(spec_file, args.target, model=args.model)
+        # Get targets from frontmatter (or use CLI override)
+        if args.target:
+            if not args.target.exists():
+                print(f"Error: Target file not found: {args.target}")
+                sys.exit(1)
+            target_paths = [args.target]
+        else:
+            target_paths = get_targets_from_frontmatter(spec_file)
+
+        runner = TestRunner(spec_file, target_paths, model=args.model)
         passed, total = runner.run()
         total_passed += passed
         total_tests += total

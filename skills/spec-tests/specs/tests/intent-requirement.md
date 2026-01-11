@@ -1,3 +1,6 @@
+---
+target: SKILL.md
+---
 # Intent Requirement Specification
 
 This spec defines the required behavior for per-test intent in spec tests.

@@ -42,7 +42,42 @@ Then [expected outcome]
 
 Structure: **H2** = test group, **H3** = test case, **prose** = required intent, **code block** = expected behavior.
 
-**Critical:** Intent prose must appear **directly above** the code block, between the H3 header and the assertion. Component-level or section-level prose does not substitute for per-test intent—each test needs its own WHY immediately before its code block.
+**Critical:** Intent prose must appear **immediately above** the code block, between the H3 header and the assertion block. Intent at the H2 section level does not count—each test case (H3) needs its own WHY prose directly before its code block. If a test has section-level intent but no per-test intent, the runner reports `[missing-intent]` and fails.
+
+---
+
+## Test Location & Targets
+
+Spec tests live in `specs/tests/` and declare their target(s) via frontmatter.
+
+**Single target:**
+```markdown
+---
+target: src/auth.py
+---
+# Authentication Tests
+```
+
+**Multiple targets:**
+```markdown
+---
+target:
+  - src/auth.py
+  - src/session.py
+  - src/middleware/auth_check.py
+---
+# Authentication Flow
+```
+
+**Directory structure** — name files by feature/spec, not by target path:
+```
+specs/tests/
+  authentication.md      ← target: [src/auth.py, src/session.py]
+  intent-requirement.md  ← target: [SKILL.md]
+  api-validation.md      ← target: [src/api/validate.py]
+```
+
+**Frontmatter is required.** Missing `target:` causes immediate failure with `[missing-target]`.
 
 ---
 
@@ -52,16 +87,18 @@ First, copy the runner files to your project (Claude will do this automatically 
 
 ```bash
 # CLAUDE_PLUGIN_ROOT is set automatically when Claude invokes this skill
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests_claude.py" tests/
-cp "${CLAUDE_PLUGIN_ROOT}/scripts/judge_prompt.md" tests/
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/run_tests_claude.py" specs/tests/
+cp "${CLAUDE_PLUGIN_ROOT}/scripts/judge_prompt.md" specs/tests/
 ```
 
 Then run tests:
 
 ```bash
-python tests/run_tests_claude.py tests/feature.md --target src/feature.py   # Single file
-python tests/run_tests_claude.py tests/ --target src/feature.py             # All tests in dir
+python specs/tests/run_tests_claude.py specs/tests/authentication.md  # Single spec
+python specs/tests/run_tests_claude.py specs/tests/                   # All specs in dir
 ```
+
+Target files are read from frontmatter—no `--target` flag needed.
 
 Uses `claude -p` (your subscription, no API key needed).
 

@@ -1,3 +1,6 @@
+---
+target: SKILL.md
+---
 # Skill Structure Requirements
 
 This spec tests the structural elements of the spec-tests skill that aren't
@@ -57,7 +60,7 @@ Given the SKILL.md file
 Then it includes:
   - How to copy the runner to a project
   - The command to run tests (python run_tests_claude.py)
-  - The --target flag for specifying what file to test
+  - How targets are specified (frontmatter or --target flag)
 Because users can't verify implementations without knowing how to run the runner
 ```
 
