@@ -31,14 +31,16 @@ tests. Without intent, the LLM cannot distinguish "this number is arbitrary" fro
 evaluated and must fail.
 
 ```
-Given a spec test file with this content:
+Given the run_tests_claude.py runner parses a spec test with this content:
   ### Completes Quickly
   ```py
   elapsed < 50  # expect: True
   ```
 
-When the LLM-as-judge evaluates this test
-Then it should report: missing-intent
+When the SpecParser extracts test cases
+Then it should set missing_intent=True for this test
+And the runner should report: [missing-intent]
+And should NOT invoke the LLM
 Because there is no prose explaining WHY 50ms matters
 ```
 
@@ -49,7 +51,7 @@ section or at the component level is not sufficient—each test needs its own "w
 to prevent gaming that specific assertion.
 
 ```
-Given a spec test file with this structure:
+Given the run_tests_claude.py runner parses a spec test with this structure:
   ## Performance (component-level intent here)
 
   ### Completes Quickly
@@ -57,8 +59,9 @@ Given a spec test file with this structure:
   elapsed < 50  # expect: True
   ```
 
-When the LLM-as-judge evaluates the "Completes Quickly" test
-Then it should report: missing-intent
+When the SpecParser extracts the "Completes Quickly" test
+Then it should set missing_intent=True
+And the runner should report: [missing-intent]
 Because component-level intent does not substitute for per-test intent
 ```
 
@@ -184,9 +187,9 @@ be reported immediately without attempting to run the assertion, because any
 result would be meaningless without knowing what's being tested.
 
 ```
-Given a spec test block with no intent prose
-When the LLM-as-judge begins evaluation
-Then it should immediately report: missing-intent
-And should NOT attempt to evaluate the assertion
+Given the run_tests_claude.py runner evaluates a test with missing_intent=True
+When the LLMJudge.evaluate() method is called
+Then it should immediately return a failed TestResult with [missing-intent]
+And should NOT invoke the claude CLI
 Because evaluation without intent is undefined
 ```
