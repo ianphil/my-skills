@@ -2,6 +2,7 @@
 target:
   - SKILL.md
   - scripts/run_tests_claude.py
+  - scripts/run_tests_opencode.py
 ---
 # Skill Structure Requirements
 
@@ -55,8 +56,8 @@ correctly extract H2 sections and H3 test cases, users get confusing failures
 even when their spec files follow the documented format.
 
 ```
-Given the run_tests_claude.py runner
-Then it has a SpecParser class that:
+Given run_tests_claude.py and run_tests_opencode.py
+Then both have a SpecParser class that:
   - Tracks H2 (##) headers as section names
   - Extracts H3 (###) headers as test case names
   - Collects prose between H3 and code block as intent

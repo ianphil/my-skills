@@ -31,6 +31,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -264,18 +265,30 @@ class LLMJudge:
 
         prompt = self._render_prompt(test, target_content, target_name)
 
+        max_retries = 3
+        retry_delay = 2  # seconds
+
         try:
-            result = subprocess.run(
-                [
-                    "claude", "-p",
-                    "--output-format", "text",
-                    "--model", self.model,
-                    prompt
-                ],
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
+            result = None
+            for attempt in range(max_retries):
+                result = subprocess.run(
+                    [
+                        "claude", "-p",
+                        "--output-format", "text",
+                        "--model", self.model,
+                        prompt
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
+
+                # Retry on "[ACTION REQUIRED]" terms acceptance error
+                if result.returncode != 0 and "[ACTION REQUIRED]" in result.stderr:
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                break
 
             if result.returncode != 0:
                 return TestResult(

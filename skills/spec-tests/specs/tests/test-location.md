@@ -2,6 +2,7 @@
 target:
   - SKILL.md
   - scripts/run_tests_claude.py
+  - scripts/run_tests_opencode.py
 ---
 # Test Location Convention
 
@@ -19,8 +20,8 @@ understand them. If docs say `[missing-target]` but the runner outputs something
 different, users can't correlate errors to documentation.
 
 ```
-Given SKILL.md and scripts/run_tests_claude.py
-Then both use [missing-target] as the error code for specs without target frontmatter
+Given SKILL.md, scripts/run_tests_claude.py, and scripts/run_tests_opencode.py
+Then all use [missing-target] as the error code for specs without target frontmatter
 Because error codes must match between documentation and implementation
 ```
 
@@ -64,9 +65,9 @@ If a user forgets the frontmatter, they should get a helpful error message
 that tells them exactly what's wrong and how to fix it.
 
 ```
-Given the run_tests_claude.py runner
+Given run_tests_claude.py and run_tests_opencode.py
 When a spec file has no target: field in frontmatter
-Then it exits with error containing: [missing-target]
+Then they exit with error containing: [missing-target]
 And the error message explains how to add frontmatter
 Because cryptic errors waste user time debugging the wrong thing
 ```
@@ -108,8 +109,8 @@ The runner must actually read and parse the frontmatter to extract targets.
 Without this, the documented convention is just documentation with no teeth.
 
 ```
-Given the run_tests_claude.py runner
-Then it has a function that parses YAML frontmatter
+Given run_tests_claude.py and run_tests_opencode.py
+Then both have a function that parses YAML frontmatter
 And extracts the target field (string or list)
 Because the runner must enforce what the docs promise
 ```
@@ -120,7 +121,7 @@ Sometimes users need to test against a different file than the frontmatter
 specifies (e.g., testing a local copy). The --target flag should override.
 
 ```
-Given the run_tests_claude.py runner
+Given run_tests_claude.py and run_tests_opencode.py
 Then the --target CLI argument is optional (not required)
 And if provided, it overrides the frontmatter target
 Because flexibility prevents users from editing spec files just to test locally

@@ -2,6 +2,7 @@
 target:
   - SKILL.md
   - scripts/run_tests_claude.py
+  - scripts/run_tests_opencode.py
 ---
 # Intent Requirement Specification
 
@@ -30,8 +31,8 @@ understand them. If docs say `[missing-intent]` but the runner outputs something
 different, users can't correlate errors to documentation.
 
 ```
-Given SKILL.md and scripts/run_tests_claude.py
-Then both use [missing-intent] as the error code for tests without intent prose
+Given SKILL.md, scripts/run_tests_claude.py, and scripts/run_tests_opencode.py
+Then all use [missing-intent] as the error code for tests without intent prose
 Because error codes must match between documentation and implementation
 ```
 
@@ -77,7 +78,7 @@ tests. Without intent, the LLM cannot distinguish "this number is arbitrary" fro
 evaluated and must fail.
 
 ```
-Given the run_tests_claude.py runner parses a spec test with this content:
+Given run_tests_claude.py and run_tests_opencode.py parse a spec test with this content:
   ### Completes Quickly
   ```py
   elapsed < 50  # expect: True
@@ -112,7 +113,7 @@ section or at the component level is not sufficient—each test needs its own "w
 to prevent gaming that specific assertion.
 
 ```
-Given the run_tests_claude.py runner parses a spec test with this structure:
+Given run_tests_claude.py and run_tests_opencode.py parse a spec test with this structure:
   ## Performance (component-level intent here)
 
   ### Completes Quickly
@@ -263,9 +264,9 @@ be reported immediately without attempting to run the assertion, because any
 result would be meaningless without knowing what's being tested.
 
 ```
-Given the run_tests_claude.py runner evaluates a test with missing_intent=True
+Given run_tests_claude.py and run_tests_opencode.py evaluate a test with missing_intent=True
 When the LLMJudge.evaluate() method is called
 Then it should immediately return a failed TestResult with [missing-intent]
-And should NOT invoke the claude CLI
+And should NOT invoke the LLM CLI
 Because evaluation without intent is undefined
 ```
