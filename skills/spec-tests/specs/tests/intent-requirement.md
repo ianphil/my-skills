@@ -1,5 +1,7 @@
 ---
-target: SKILL.md
+target:
+  - SKILL.md
+  - scripts/run_tests_claude.py
 ---
 # Intent Requirement Specification
 
