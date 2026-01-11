@@ -87,7 +87,7 @@ Evaluate whether the target implementation would produce the expected outcome wh
 - Intent: "Users expect immediate access with correct credentials"
 - Assertion: "Then they are redirected to the dashboard"
 
-**Result:** `{"passed": true, "reasoning": "Implementation redirects to dashboard on valid login, satisfying both the immediate access intent and the redirect assertion."}`
+**Result:** `{"passed": true, "reasoning": "Redirects to dashboard on valid login."}`
 
 ### Example 2: FAIL (assertion not met)
 
@@ -95,7 +95,7 @@ Evaluate whether the target implementation would produce the expected outcome wh
 - Intent: "Users expect immediate access"
 - Assertion: "Then they are redirected to the dashboard"
 
-**Result:** `{"passed": false, "reasoning": "[assertion-failed] Valid credentials show error page instead of redirecting to dashboard."}`
+**Result:** `{"passed": false, "reasoning": "[assertion-failed] Shows error page instead of dashboard."}`
 
 ### Example 3: FAIL (intent violated)
 
@@ -103,7 +103,7 @@ Evaluate whether the target implementation would produce the expected outcome wh
 - Intent: "Users perceive delays over 50ms as laggy. This runs on every keystroke."
 - Assertion (modified): "completes in under 200ms"
 
-**Result:** `{"passed": false, "reasoning": "[intent-violated] The assertion was relaxed to 200ms, but the intent clearly states 50ms is the UX threshold. The implementation at 150ms violates the user's perception requirement, regardless of the modified assertion."}`
+**Result:** `{"passed": false, "reasoning": "[intent-violated] 150ms exceeds 50ms UX threshold stated in intent."}`
 
 ---
 
@@ -122,11 +122,13 @@ Be strict in your evaluation:
 
 **IMPORTANT: Output ONLY a JSON object. No markdown, no code blocks, no other text.**
 
+**Keep reasoning under 100 characters.** Be terse. No code snippets in reasoning.
+
 For passing tests:
-{"passed": true, "reasoning": "brief explanation of how requirement is satisfied"}
+{"passed": true, "reasoning": "Brief 1-sentence explanation"}
 
 For failing tests:
-{"passed": false, "reasoning": "[error-code] explanation of why it failed"}
+{"passed": false, "reasoning": "[error-code] Brief 1-sentence explanation"}
 
 Error codes:
 - [intent-violated] — Assertion might pass literally, but intent is not satisfied
