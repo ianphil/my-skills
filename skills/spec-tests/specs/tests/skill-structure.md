@@ -96,20 +96,6 @@ Then it mentions that the runner uses:
 Because users should know they don't need separate API billing to use this
 ```
 
-### Runner Invokes Claude CLI
-
-The runner must actually use `claude -p` as documented. If it used the API
-directly or a different invocation method, users would need API keys despite
-the documentation saying otherwise.
-
-```
-Given the run_tests_claude.py runner
-Then the LLMJudge class invokes claude via subprocess with:
-  - "claude" as the command
-  - "-p" flag for prompt mode
-Because the implementation must match what's documented (no API key needed)
-```
-
 ---
 
 ## Differentiation
