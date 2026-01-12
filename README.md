@@ -64,44 +64,32 @@ uv run script.py     # Run without manual venv activation
 uv pip install -r requirements.txt  # Fast pip alternative
 ```
 
-### literate-tests
+### spec-tests
 
-Create and run markdown-based test suites that agents can execute autonomously. Tests serve as both documentation and executable specifications.
+Intent-based specification tests evaluated by LLM-as-judge. Tests capture WHY something matters, making them cheat-proof for LLM-driven development.
 
-**Supported languages:**
-- Python
-- JavaScript / TypeScript
-- Bash / Shell
-- PowerShell
-- Rust
-- C#
-
-**Example test file** (`tests/parser.md`):
+**Example test file** (`specs/tests/authentication.md`):
 ````markdown
----toml
-module = "mypackage.parser"
-import = ["parse", "ParseError"]
 ---
+target: src/auth.py
+---
+# Authentication Tests
 
-# Parser Tests
+### Valid Credentials Return Token
 
-## Valid Input
+Users need immediate access after login. Failed authentication should not
+expose whether email or password was wrong (security requirement).
 
-```py
-result = parse("hello world")
-result.tokens  # expect: ["hello", "world"]
 ```
-
-## Error Handling
-
-```py
-parse(None)  # error: [null-input]
+Given valid credentials
+When authenticate() is called
+Then a JWT token is returned within 100ms
 ```
 ````
 
 **Running tests:**
 ```bash
-python scripts/run_tests.py tests/parser.md
+python specs/tests/run_tests_claude.py specs/tests/authentication.md
 ```
 
 ## Repository Structure
@@ -113,16 +101,11 @@ my-skills/
 └── skills/
     ├── astral-uv/
     │   └── SKILL.md
-    └── literate-tests/
+    └── spec-tests/
         ├── SKILL.md
-        └── scripts/        # Language-specific test runners
-            ├── run_tests.py
-            ├── run_tests.js
-            ├── run_tests.ts
-            ├── run_tests.sh
-            ├── run_tests.ps1
-            ├── run_tests.rs
-            └── RunTests.cs
+        └── scripts/        # Test runner and judge prompt
+            ├── run_tests_claude.py
+            └── judge_prompt.md
 ```
 
 ## License

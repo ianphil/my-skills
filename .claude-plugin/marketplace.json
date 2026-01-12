@@ -18,7 +18,7 @@
       "skills": [
         "./skills/astral-uv",
         "./skills/conversation-logging",
-        "./skills/literate-tests",
+        "./skills/spec-tests",
         "./skills/tmux-tdd"
       ]
     }
