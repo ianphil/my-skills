@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+.local/
+.opencode/
+.claude/settings.local.json
+.ruff_cache/

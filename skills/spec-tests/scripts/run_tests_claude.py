@@ -40,6 +40,167 @@ from typing import Optional
 JUDGE_PROMPT_FILE = Path(__file__).parent / "judge_prompt.md"
 
 
+# ============================================================================
+# JSON Extraction Helpers
+# NOTE: This code is intentionally duplicated across all three runners
+# (run_tests_opencode.py, run_tests_claude.py, run_tests_codex.py) to maintain
+# portability. Each runner must be self-contained as a single file.
+# ============================================================================
+
+
+class JSONExtractionError(Exception):
+    """Raised when JSON cannot be extracted from LLM response."""
+
+    pass
+
+
+def _extract_json_pure(text: str) -> dict:
+    """Strategy 1: Assume response is pure JSON."""
+    return json.loads(text.strip())
+
+
+def _extract_json_from_code_block(text: str) -> dict:
+    """Strategy 2: Extract from markdown code block."""
+    if "```" not in text:
+        raise ValueError("No code block markers found")
+
+    match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
+    if not match:
+        raise ValueError("Code block markers present but pattern didn't match")
+
+    return json.loads(match.group(1).strip())
+
+
+def _extract_json_balanced_braces(text: str) -> dict:
+    """
+    Strategy 3: Extract balanced JSON object using brace counting.
+
+    This fixes the nested object bug by properly tracking brace depth
+    and respecting string boundaries.
+    """
+    start = text.find("{")
+    if start < 0:
+        raise ValueError("No opening brace found")
+
+    depth = 0
+    in_string = False
+    escape_next = False
+
+    for i in range(start, len(text)):
+        char = text[i]
+
+        # Handle escape sequences
+        if escape_next:
+            escape_next = False
+            continue
+        if char == "\\":
+            escape_next = True
+            continue
+
+        # Track string boundaries (braces inside strings don't count)
+        if char == '"':
+            in_string = not in_string
+            continue
+
+        # Count braces only outside strings
+        if not in_string:
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    # Found matching closing brace
+                    json_text = text[start : i + 1]
+                    return json.loads(json_text)
+
+    raise ValueError(f"No matching closing brace found (depth={depth})")
+
+
+def _extract_json_lenient(text: str) -> dict:
+    """Strategy 4: Try with aggressive whitespace/prefix removal."""
+    cleaned = text.strip()
+
+    # Remove common LLM response prefixes
+    prefixes = [
+        "Here's the JSON:",
+        "Here is the JSON:",
+        "Response:",
+        "Output:",
+    ]
+    for prefix in prefixes:
+        if cleaned.startswith(prefix):
+            cleaned = cleaned[len(prefix) :].strip()
+
+    return _extract_json_balanced_braces(cleaned)
+
+
+def extract_judge_response_json(response_text: str) -> dict:
+    """
+    Extract and parse JSON from LLM response using multiple strategies.
+
+    Tries strategies in order:
+    1. Pure JSON (no wrapping)
+    2. Markdown code block
+    3. Balanced brace extraction (handles nested objects)
+    4. Lenient (with prefix removal)
+
+    Args:
+        response_text: Raw text from LLM
+
+    Returns:
+        Parsed JSON dictionary with 'passed' and 'reasoning' keys
+
+    Raises:
+        JSONExtractionError: If JSON cannot be extracted/parsed or schema is invalid
+    """
+    if not response_text or not response_text.strip():
+        raise JSONExtractionError("Empty response from LLM")
+
+    strategies = [
+        ("pure JSON", _extract_json_pure),
+        ("code block", _extract_json_from_code_block),
+        ("balanced braces", _extract_json_balanced_braces),
+        ("lenient", _extract_json_lenient),
+    ]
+
+    errors = []
+    for strategy_name, strategy_func in strategies:
+        try:
+            data = strategy_func(response_text)
+
+            # Validate schema
+            if not isinstance(data, dict):
+                raise ValueError(f"Expected dict, got {type(data).__name__}")
+            if "passed" not in data:
+                raise ValueError("Missing required field: 'passed'")
+            if not isinstance(data["passed"], bool):
+                raise ValueError(
+                    f"Field 'passed' must be bool, got {type(data['passed']).__name__}"
+                )
+
+            # 'reasoning' is optional, use default if missing
+            if "reasoning" not in data:
+                data["reasoning"] = "No reasoning provided"
+            elif not isinstance(data["reasoning"], str):
+                raise ValueError(
+                    f"Field 'reasoning' must be string, got {type(data['reasoning']).__name__}"
+                )
+
+            return data
+
+        except (json.JSONDecodeError, ValueError) as e:
+            errors.append(f"{strategy_name}: {e}")
+            continue
+
+    # All strategies failed
+    preview = response_text[:200].replace("\n", "\\n")
+    error_details = "\n  ".join(errors)
+    raise JSONExtractionError(
+        f"Failed to extract JSON using all strategies:\n  {error_details}\n"
+        f"Response preview: {preview}..."
+    )
+
+
 def parse_frontmatter(content: str) -> tuple[dict, str]:
     """
     Parse YAML frontmatter from markdown content.
@@ -47,36 +208,36 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
     Returns (metadata dict, content without frontmatter).
     Frontmatter must be delimited by --- at start and end.
     """
-    if not content.startswith('---'):
+    if not content.startswith("---"):
         return {}, content
 
     # Find the closing ---
-    end_match = re.search(r'\n---\s*(?:\n|$)', content[3:])
+    end_match = re.search(r"\n---\s*(?:\n|$)", content[3:])
     if not end_match:
         return {}, content
 
-    frontmatter_text = content[3:end_match.start() + 3]
-    remaining_content = content[end_match.end() + 3:]
+    frontmatter_text = content[3 : end_match.start() + 3]
+    remaining_content = content[end_match.end() + 3 :]
 
     # Simple YAML parsing for target field (avoid yaml dependency)
     metadata = {}
-    lines = frontmatter_text.strip().split('\n')
+    lines = frontmatter_text.strip().split("\n")
     current_key = None
     current_list = []
 
     for line in lines:
         # Array item
-        if line.strip().startswith('- '):
+        if line.strip().startswith("- "):
             if current_key:
                 current_list.append(line.strip()[2:].strip())
         # Key-value pair
-        elif ':' in line and not line.startswith(' ') and not line.startswith('\t'):
+        elif ":" in line and not line.startswith(" ") and not line.startswith("\t"):
             # Save previous list if any
             if current_key and current_list:
                 metadata[current_key] = current_list
                 current_list = []
 
-            key, _, value = line.partition(':')
+            key, _, value = line.partition(":")
             current_key = key.strip()
             value = value.strip()
             if value:
@@ -105,15 +266,17 @@ def get_targets_from_frontmatter(spec_path: Path) -> list[Path]:
     content = spec_path.read_text()
     metadata, _ = parse_frontmatter(content)
 
-    if 'target' not in metadata:
-        print(f"Error: [missing-target] No 'target:' field in frontmatter of {spec_path}")
+    if "target" not in metadata:
+        print(
+            f"Error: [missing-target] No 'target:' field in frontmatter of {spec_path}"
+        )
         print("Each spec file must declare its target(s) in frontmatter:")
         print("---")
         print("target: path/to/file.py")
         print("---")
         sys.exit(1)
 
-    target = metadata['target']
+    target = metadata["target"]
 
     # Normalize to list
     if isinstance(target, str):
@@ -137,6 +300,7 @@ def get_targets_from_frontmatter(spec_path: Path) -> list[Path]:
 @dataclass
 class TestCase:
     """A single test case extracted from the spec file."""
+
     name: str
     section: str
     intent: str
@@ -149,6 +313,7 @@ class TestCase:
 @dataclass
 class TestResult:
     """Result of evaluating a test case."""
+
     test: TestCase
     passed: bool
     reasoning: str
@@ -162,7 +327,7 @@ class SpecParser:
         # Strip frontmatter if present
         _, content_without_frontmatter = parse_frontmatter(content)
         self.content = content_without_frontmatter
-        self.lines = self.content.split('\n')
+        self.lines = self.content.split("\n")
 
     def parse(self) -> list[TestCase]:
         """Extract all test cases from the spec file."""
@@ -174,13 +339,13 @@ class SpecParser:
             line = self.lines[i]
 
             # Track H2 sections
-            if line.startswith('## '):
+            if line.startswith("## "):
                 current_section = line[3:].strip()
                 i += 1
                 continue
 
             # Found H3 test case
-            if line.startswith('### '):
+            if line.startswith("### "):
                 test_name = line[4:].strip()
                 test_line = i + 1
                 i += 1
@@ -189,42 +354,46 @@ class SpecParser:
                 intent_lines = []
                 missing_assertion = False
                 while i < len(self.lines):
-                    if self.lines[i].startswith('```'):
+                    if self.lines[i].startswith("```"):
                         break
-                    if self.lines[i].startswith('## ') or self.lines[i].startswith('### '):
+                    if self.lines[i].startswith("## ") or self.lines[i].startswith(
+                        "### "
+                    ):
                         missing_assertion = True
                         break
                     if self.lines[i].strip():  # Skip empty lines for intent
                         intent_lines.append(self.lines[i])
                     i += 1
 
-                intent = '\n'.join(intent_lines).strip()
+                intent = "\n".join(intent_lines).strip()
 
                 # Collect the code block (assertion)
                 assertion_lines = []
-                if i < len(self.lines) and self.lines[i].startswith('```'):
+                if i < len(self.lines) and self.lines[i].startswith("```"):
                     i += 1  # Skip opening ```
-                    while i < len(self.lines) and not self.lines[i].startswith('```'):
+                    while i < len(self.lines) and not self.lines[i].startswith("```"):
                         assertion_lines.append(self.lines[i])
                         i += 1
                     i += 1  # Skip closing ```
                 else:
                     missing_assertion = True
 
-                assertion_block = '\n'.join(assertion_lines).strip()
+                assertion_block = "\n".join(assertion_lines).strip()
 
                 # Include test if it has an assertion block (even without intent)
                 # Missing intent will be flagged as a failure during evaluation
                 if assertion_block or missing_assertion:
-                    tests.append(TestCase(
-                        name=test_name,
-                        section=current_section,
-                        intent=intent,
-                        assertion_block=assertion_block,
-                        line_number=test_line,
-                        missing_intent=not intent,
-                        missing_assertion=missing_assertion
-                    ))
+                    tests.append(
+                        TestCase(
+                            name=test_name,
+                            section=current_section,
+                            intent=intent,
+                            assertion_block=assertion_block,
+                            line_number=test_line,
+                            missing_intent=not intent,
+                            missing_assertion=missing_assertion,
+                        )
+                    )
                 continue
 
             i += 1
@@ -248,11 +417,12 @@ class LLMJudge:
             )
         return JUDGE_PROMPT_FILE.read_text()
 
-    def _render_prompt(self, test: TestCase, target_content: str, target_name: str) -> str:
+    def _render_prompt(
+        self, test: TestCase, target_content: str, target_name: str
+    ) -> str:
         """Substitute placeholders in the prompt template."""
         return (
-            self._prompt_template
-            .replace("{{target_name}}", target_name)
+            self._prompt_template.replace("{{target_name}}", target_name)
             .replace("{{target_content}}", target_content)
             .replace("{{test_name}}", test.name)
             .replace("{{test_section}}", test.section)
@@ -260,7 +430,9 @@ class LLMJudge:
             .replace("{{assertion_block}}", test.assertion_block)
         )
 
-    def evaluate(self, test: TestCase, target_content: str, target_name: str) -> TestResult:
+    def evaluate(
+        self, test: TestCase, target_content: str, target_name: str
+    ) -> TestResult:
         """Evaluate a single test case against the target content."""
 
         # Fail immediately if intent is missing - don't even call the LLM
@@ -269,7 +441,7 @@ class LLMJudge:
                 test=test,
                 passed=False,
                 reasoning="[missing-assertion] Test has no assertion code block. Add a "
-                          "fenced code block after the intent."
+                "fenced code block after the intent.",
             )
 
         # Fail immediately if intent is missing - don't even call the LLM
@@ -278,8 +450,8 @@ class LLMJudge:
                 test=test,
                 passed=False,
                 reasoning="[missing-intent] Test has no intent prose. Each test requires "
-                          "intent explaining WHY it matters. Add prose between the H3 header "
-                          "and the code block."
+                "intent explaining WHY it matters. Add prose between the H3 header "
+                "and the code block.",
             )
 
         prompt = self._render_prompt(test, target_content, target_name)
@@ -292,14 +464,17 @@ class LLMJudge:
             for attempt in range(max_retries):
                 result = subprocess.run(
                     [
-                        "claude", "-p",
-                        "--output-format", "text",
-                        "--model", self.model,
-                        prompt
+                        "claude",
+                        "-p",
+                        "--output-format",
+                        "text",
+                        "--model",
+                        self.model,
+                        prompt,
                     ],
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    timeout=120,
                 )
 
                 # Retry on "[ACTION REQUIRED]" terms acceptance error
@@ -314,53 +489,47 @@ class LLMJudge:
                     test=test,
                     passed=False,
                     reasoning="",
-                    error=f"claude CLI failed: {result.stderr}"
+                    error=f"claude CLI failed: {result.stderr}",
                 )
 
             response_text = result.stdout.strip()
 
-            # Extract JSON from response (handle markdown code blocks)
-            if '```' in response_text:
-                # Find JSON between code blocks
-                import re
-                match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
-                if match:
-                    response_text = match.group(1).strip()
+            # Extract and validate JSON from response
+            try:
+                parsed = extract_judge_response_json(response_text)
+                return TestResult(
+                    test=test,
+                    passed=parsed["passed"],
+                    reasoning=parsed["reasoning"],
+                )
+            except JSONExtractionError as e:
+                preview_len = 300
+                response_preview = (
+                    response_text[:preview_len] if response_text else "(empty)"
+                )
+                if response_text and len(response_text) > preview_len:
+                    response_preview += f"... ({len(response_text)} chars total)"
 
-            # Try to find JSON object in response
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
-            if json_start >= 0 and json_end > json_start:
-                response_text = response_text[json_start:json_end]
+                return TestResult(
+                    test=test,
+                    passed=False,
+                    reasoning="",
+                    error=(
+                        f"JSON extraction failed: {e}\n\n"
+                        f"Response received:\n{response_preview}"
+                    ),
+                )
 
-            parsed = json.loads(response_text)
-
-            return TestResult(
-                test=test,
-                passed=parsed.get('passed', False),
-                reasoning=parsed.get('reasoning', 'No reasoning provided')
-            )
-
-        except json.JSONDecodeError as e:
-            return TestResult(
-                test=test,
-                passed=False,
-                reasoning="",
-                error=f"Failed to parse response as JSON: {e}\nResponse: {response_text[:500]}"
-            )
         except subprocess.TimeoutExpired:
             return TestResult(
                 test=test,
                 passed=False,
                 reasoning="",
-                error="claude CLI timed out after 120 seconds"
+                error="claude CLI timed out after 120 seconds",
             )
         except Exception as e:
             return TestResult(
-                test=test,
-                passed=False,
-                reasoning="",
-                error=f"Evaluation failed: {e}"
+                test=test, passed=False, reasoning="", error=f"Evaluation failed: {e}"
             )
 
 
@@ -368,14 +537,20 @@ class TestRunner:
     """Runs all tests and reports results."""
 
     # ANSI colors
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    CYAN = '\033[96m'
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    CYAN = "\033[96m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
 
-    def __init__(self, spec_path: Path, target_paths: list[Path], model: str = "sonnet", test_filter: str = None):
+    def __init__(
+        self,
+        spec_path: Path,
+        target_paths: list[Path],
+        model: str = "sonnet",
+        test_filter: str = None,
+    ):
         self.spec_path = spec_path
         self.target_paths = target_paths
         self.test_filter = test_filter
@@ -413,7 +588,9 @@ class TestRunner:
         if self.test_filter:
             tests = [t for t in tests if t.name == self.test_filter]
             if not tests:
-                print(f"{self.YELLOW}No test named '{self.test_filter}' found{self.RESET}")
+                print(
+                    f"{self.YELLOW}No test named '{self.test_filter}' found{self.RESET}"
+                )
                 return 0, 0
 
         # Format target display
@@ -432,7 +609,11 @@ class TestRunner:
         failed = 0
 
         for test in tests:
-            print(f"\n{self.CYAN}{test.section}{self.RESET} > {test.name} ... ", end="", flush=True)
+            print(
+                f"\n{self.CYAN}{test.section}{self.RESET} > {test.name} ... ",
+                end="",
+                flush=True,
+            )
 
             result = self.judge.evaluate(test, target_content, target_name)
 
@@ -458,7 +639,9 @@ class TestRunner:
         if failed == 0:
             print(f"{self.GREEN}{self.BOLD}All {passed} tests passed{self.RESET}")
         else:
-            print(f"{self.RED}{self.BOLD}{failed} failed{self.RESET}, {self.GREEN}{passed} passed{self.RESET}")
+            print(
+                f"{self.RED}{self.BOLD}{failed} failed{self.RESET}, {self.GREEN}{passed} passed{self.RESET}"
+            )
 
         return passed, len(tests)
 
@@ -467,9 +650,17 @@ def main():
     parser = argparse.ArgumentParser(
         description="LLM-as-Judge test runner using claude CLI"
     )
-    parser.add_argument("spec_path", type=Path, help="Path to spec test file or directory of .md files")
-    parser.add_argument("--target", type=Path, help="Override target file (normally read from frontmatter)")
-    parser.add_argument("--model", default="sonnet", help="Claude model to use (default: sonnet)")
+    parser.add_argument(
+        "spec_path", type=Path, help="Path to spec test file or directory of .md files"
+    )
+    parser.add_argument(
+        "--target",
+        type=Path,
+        help="Override target file (normally read from frontmatter)",
+    )
+    parser.add_argument(
+        "--model", default="sonnet", help="Claude model to use (default: sonnet)"
+    )
     parser.add_argument("--test", help="Run only the test with this name (exact match)")
 
     args = parser.parse_args()
@@ -508,7 +699,9 @@ def main():
         else:
             target_paths = get_targets_from_frontmatter(spec_file)
 
-        runner = TestRunner(spec_file, target_paths, model=args.model, test_filter=args.test)
+        runner = TestRunner(
+            spec_file, target_paths, model=args.model, test_filter=args.test
+        )
         passed, total = runner.run()
         total_passed += passed
         total_tests += total
@@ -521,7 +714,9 @@ def main():
             print(f"\033[92m\033[1mAll {total_passed} tests passed\033[0m")
         else:
             failed = total_tests - total_passed
-            print(f"\033[91m\033[1m{failed} failed\033[0m, \033[92m{total_passed} passed\033[0m")
+            print(
+                f"\033[91m\033[1m{failed} failed\033[0m, \033[92m{total_passed} passed\033[0m"
+            )
 
     sys.exit(0 if total_passed == total_tests else 1)
 
