@@ -2,6 +2,7 @@
 target:
   - SKILL.md
   - scripts/judge_prompt.md
+  - references/evaluation.md
 ---
 # Evaluation Contract
 
@@ -19,8 +20,8 @@ Users see error messages from the runner before tests even reach the judge.
 These are structural failures caught by parsing, not by LLM evaluation.
 
 ```
-Given the SKILL.md file
-Then it contains these runner-level error code strings:
+Given the SKILL.md and references/evaluation.md files
+Then they contain these runner-level error code strings:
   - "[missing-intent]" for tests without intent statement
   - "[missing-assertion]" for tests without code blocks
   - "[missing-target]" for specs without frontmatter target
@@ -33,8 +34,8 @@ The most important judge error is intent violation—when code passes the
 assertion but fails the underlying requirement. Users must understand this.
 
 ```
-Given the SKILL.md file
-Then it contains "[intent-violated]" and explains it means:
+Given the SKILL.md and references/evaluation.md files
+Then they contain "[intent-violated]" and explain it means:
   - The assertion might pass literally
   - But the stated intent/requirement is not satisfied
 Because this is the core "cheat-proofing" mechanism users need to understand
@@ -66,8 +67,8 @@ This is the core differentiator from traditional testing—without this
 understanding, users won't write effective intent statement.
 
 ```
-Given the SKILL.md file
-Then it documents that the LLM-as-judge evaluates:
+Given the SKILL.md and references/evaluation.md files
+Then they document that the LLM-as-judge evaluates:
   1. Does the assertion pass? (literal check)
   2. Does the implementation satisfy the intent? (semantic check)
 And the test passes only if BOTH are true
