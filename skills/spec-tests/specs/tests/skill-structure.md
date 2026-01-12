@@ -45,7 +45,7 @@ Given the SKILL.md file
 Then it documents that:
   - H2 (##) headers define test groups/sections
   - H3 (###) headers define individual test cases
-  - Intent prose appears between H3 and code block
+  - Intent statement appears between H3 and code block
   - Code blocks contain expected behavior
 Because consistent structure enables reliable parsing and clear organization
 ```
@@ -61,7 +61,7 @@ Given run_tests_claude.py, run_tests_opencode.py, and run_tests_codex.py
 Then all have a SpecParser class that:
   - Tracks H2 (##) headers as section names
   - Extracts H3 (###) headers as test case names
-  - Collects prose between H3 and code block as intent
+  - Collects text between H3 and code block as intent
   - Extracts code block content as assertion
 Because the implementation must match the documented structure
 ```

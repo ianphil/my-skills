@@ -351,7 +351,7 @@ class SpecParser:
                 test_line = i + 1
                 i += 1
 
-                # Collect intent prose until we hit a code block
+                # Collect intent statement until we hit a code block
                 intent_lines = []
                 missing_assertion = False
                 while i < len(self.lines):
@@ -471,8 +471,8 @@ class LLMJudge:
             return TestResult(
                 test=test,
                 passed=False,
-                reasoning="[missing-intent] Test has no intent prose. Each test requires "
-                "intent explaining WHY it matters. Add prose between the H3 header "
+                reasoning="[missing-intent] Test has no intent statement. Each test requires "
+                "intent explaining WHY it matters. Add statement between the H3 header "
                 "and the code block.",
             )
 

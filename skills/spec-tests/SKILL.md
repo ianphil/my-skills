@@ -1,9 +1,11 @@
 ---
 name: spec-tests
+version: 1.0.0
 description: >
   Intent-based specification tests evaluated by LLM-as-judge. Use when the user
-  asks to "create spec tests", "TDD with intent", or wants tests that capture
-  WHY, not just WHAT. NOT pytest/jest/unittest - natural language specs Claude evaluates.
+  asks to "create spec tests", "write intent tests", "TDD with intent",
+  "natural language tests", or wants tests that capture WHY, not just WHAT.
+  NOT pytest/jest/unittest - natural language specs Claude evaluates.
 ---
 
 # Spec Tests: Intent-Based Testing for LLM Development
@@ -30,7 +32,7 @@ Spec tests are **intent-based specifications** that Claude evaluates as judge. T
 
 ### Test Case Name
 
-Intent prose explaining WHY this test matters. What user need does it serve?
+Intent statement explaining WHY this test matters. What user need does it serve?
 What breaks if this doesn't work?
 
 \`\`\`
@@ -40,9 +42,9 @@ Then [expected outcome]
 \`\`\`
 ```
 
-Structure: **H2** = test group, **H3** = test case, **prose** = required intent, **code block** = expected behavior.
+Structure: **H2** = test group, **H3** = test case, **intent** = required statement, **code block** = expected behavior.
 
-**Critical:** Intent prose must appear **immediately above** the code block, between the H3 header and the assertion block. Intent at the H2 section level does not count—each test case (H3) needs its own WHY prose directly before its code block. If a test has section-level intent but no per-test intent, the runner reports `[missing-intent]` and fails.
+**Critical:** Intent statement must appear **immediately above** the code block, between the H3 header and the assertion block. Intent at the H2 section level does not count—each test case (H3) needs its own WHY statement directly before its code block. If a test has section-level intent but no per-test intent, the runner reports `[missing-intent]` and fails.
 
 Each test must include a fenced code block. Missing code blocks fail with `[missing-assertion]`.
 
@@ -224,7 +226,7 @@ elapsed < 50ms  # Fails at 73ms
 ```
 LLM thinks: "50 seems arbitrary, change to 100." User gets laggy editor.
 
-The runner reports `[missing-intent]` and fails immediately—tests without intent prose cannot be evaluated.
+The runner reports `[missing-intent]` and fails immediately—tests without intent statements cannot be evaluated.
 
 **With intent:**
 ```markdown
@@ -312,7 +314,7 @@ elapsed < 50  // expect: true
 \`\`\`
 ```
 
-The intent prose is identical—user perception of lag doesn't change with implementation language. Only the assertion syntax changes.
+The intent statement is identical—user perception of lag doesn't change with implementation language. Only the assertion syntax changes.
 
 ---
 
@@ -320,7 +322,7 @@ The intent prose is identical—user perception of lag doesn't change with imple
 
 The LLM-as-judge evaluates **both** the assertion AND the intent for every test:
 
-1. **Pre-check:** If intent prose is missing, the test fails immediately with `[missing-intent]`. The assertion is not evaluated—evaluation without intent is undefined.
+1. **Pre-check:** If intent statement is missing, the test fails immediately with `[missing-intent]`. The assertion is not evaluated—evaluation without intent is undefined.
 
 2. **Dual evaluation:** For tests with intent, Claude checks:
    - Does the assertion pass? (literal check)
@@ -338,7 +340,7 @@ This dual evaluation catches "legal but wrong" solutions that traditional assert
 
 When testing files that contain LLM instructions (like prompt templates), the judge can confuse the target content with its own instructions. The judge sees "output JSON only" in the file being evaluated and thinks it's being told what to do, rather than checking if the file contains that text.
 
-**The fix:** Add explicit framing in the intent prose telling the judge to treat the file as a document to inspect, not commands to follow.
+**The fix:** Add explicit framing in the intent statement telling the judge to treat the file as a document to inspect, not commands to follow.
 
 **Without framing (fails intermittently):**
 ```markdown
@@ -378,7 +380,7 @@ Then the file text contains "respond with ONLY a JSON object"
 
 ## Checklist
 
-- [ ] Each test has intent prose explaining WHY
+- [ ] Each test has intent statement explaining WHY
 - [ ] Intent is business/user focused
 - [ ] Expected behavior is clear
 - [ ] Each test includes a fenced assertion code block
@@ -386,4 +388,4 @@ Then the file text contains "respond with ONLY a JSON object"
 - [ ] Multi-target specs: each test starts with `Given the <target> file`
 - [ ] Shared requirements: use `Given <file1> and <file2>` when same test applies to multiple files
 
-> **Missing intent = immediate failure.** The runner rejects tests without intent prose before evaluating behavior—evaluation without intent is undefined.
+> **Missing intent = immediate failure.** The runner rejects tests without intent statements before evaluating behavior—evaluation without intent is undefined.

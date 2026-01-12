@@ -2,14 +2,31 @@
 
 Intent-based specification tests evaluated by LLM-as-judge. Natural language specs that capture **WHY**, not just **WHAT**.
 
+## Why use this?
+
+If you're using LLMs to write code, you've probably seen this: the test says `elapsed < 50ms`, it fails at 73ms, and the LLM "fixes" it by changing the threshold to 100ms. Test passes. User gets a laggy app.
+
+Traditional tests only check **what**. Spec tests also check **why**—so when the LLM sees "users perceive delays over 50ms as laggy," it knows the threshold isn't negotiable.
+
+This matters when:
+- LLMs are writing or modifying your code
+- You want tests that survive refactoring without losing their purpose
+- Requirements come from product/UX and need to stay anchored to user needs
+- You're tired of tests that pass technically but miss the point
+
 ## What is this?
 
-Traditional tests check assertions. Spec tests check **intent**—the business reason behind the assertion. This makes them cheat-proof for LLM-driven development: Claude can't "game" the test by relaxing thresholds when it understands *why* those thresholds exist.
+Natural language specs with intent statements, evaluated by an LLM judge. Each test has:
+- **Intent** — WHY this matters (business reason, user need)
+- **Assertion** — WHAT should happen (Given/When/Then)
+
+The judge checks both. If the assertion passes but violates the intent, you get `[intent-violated]` instead of a false green.
 
 ```
-[missing-intent]  → Test has no intent prose, fails immediately
-[missing-assertion] → Test has no assertion code block, fails immediately
-[intent-violated] → Assertion passes but violates stated business requirement
+[missing-target]    → Spec file has no target: in frontmatter
+[missing-intent]    → Test has no intent statement
+[missing-assertion] → Test has no assertion code block
+[intent-violated]   → Assertion passes but violates stated business requirement
 ```
 
 ## Quick Start
@@ -54,6 +71,8 @@ Uses `claude -p` (your subscription, no API key needed).
 
 **Options:** `--target FILE` (override target), `--model MODEL`, `--test "Name"` (run single test)
 
+**Alternative runners:** `run_tests_opencode.py` (uses opencode CLI), `run_tests_codex.py` (uses OpenAI Codex CLI). Same interface, different LLM backend.
+
 ## Test Format
 
 | Element | Markdown | Purpose |
@@ -75,9 +94,7 @@ skills/spec-tests/
 │   ├── run_tests_codex.py    # Test runner (codex)
 │   └── judge_prompt.md       # LLM judge prompt template
 └── specs/tests/          # Spec tests for this skill (dogfooding)
-    ├── intent-requirement.md
-    ├── skill-structure.md
-    └── test-location.md
+    └── *.md              # intent-requirement, skill-structure, etc.
 ```
 
 ## See Also

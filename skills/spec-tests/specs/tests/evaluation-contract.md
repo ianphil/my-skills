@@ -21,7 +21,7 @@ These are structural failures caught by parsing, not by LLM evaluation.
 ```
 Given the SKILL.md file
 Then it contains these runner-level error code strings:
-  - "[missing-intent]" for tests without intent prose
+  - "[missing-intent]" for tests without intent statement
   - "[missing-assertion]" for tests without code blocks
   - "[missing-target]" for specs without frontmatter target
 Because users need to understand errors that occur before LLM evaluation
@@ -63,7 +63,7 @@ Because the judge needs explicit error codes to use in reasoning
 
 Users need to understand that spec tests check BOTH assertion AND intent.
 This is the core differentiator from traditional testing—without this
-understanding, users won't write effective intent prose.
+understanding, users won't write effective intent statement.
 
 ```
 Given the SKILL.md file

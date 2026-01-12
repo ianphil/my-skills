@@ -14,11 +14,11 @@ It ensures the "cheat-proofing" property is preserved across changes to the skil
 implementations. Without intent, there's no way to distinguish negotiable constraints
 from sacred requirements.
 
-**Solution:** Every test block requires intent prose that the LLM-as-judge evaluates
+**Solution:** Every test block requires intent statement that the LLM-as-judge evaluates
 alongside the assertion.
 
 **Error codes:**
-- `[missing-intent]` — Test block has no intent prose above it
+- `[missing-intent]` — Test block has no intent statement above it
 - `[intent-violated]` — Implementation passes assertion but violates stated intent
 
 ---
@@ -33,7 +33,7 @@ different, users can't correlate errors to documentation.
 
 ```
 Given SKILL.md, scripts/run_tests_claude.py, scripts/run_tests_opencode.py, and scripts/run_tests_codex.py
-Then all use [missing-intent] as the error code for tests without intent prose
+Then all use [missing-intent] as the error code for tests without intent statement
 Because error codes must match between documentation and implementation
 ```
 
@@ -58,14 +58,14 @@ Because users need to avoid test duplication when requirements span files
 
 ### Documents Intent Requirement
 
-The skill must clearly state that intent prose is mandatory for every test.
+The skill must clearly state that intent statement is mandatory for every test.
 Users need to understand this isn't optional—tests without intent cannot be
 evaluated and will fail immediately.
 
 ```
 Given the SKILL.md file
 Then it documents that:
-  - Intent prose is required for every test
+  - Intent statement is required for every test
   - Intent must explain WHY the test matters
   - Missing intent causes immediate failure with [missing-intent]
 Because users must understand intent is mandatory, not optional
@@ -89,19 +89,19 @@ When the SpecParser extracts test cases
 Then it should set missing_intent=True for this test
 And the runner should report: [missing-intent]
 And should NOT invoke the LLM
-Because there is no prose explaining WHY 50ms matters
+Because there is no statement explaining WHY 50ms matters
 ```
 
 ### Documents Per-Test Intent Location
 
 The skill must explain that intent belongs directly above each test's code block,
-not at the section level. Users might assume section-level prose counts—the docs
+not at the section level. Users might assume section-level intent counts—the docs
 must clarify this won't work.
 
 ```
 Given the SKILL.md file
 Then it documents that:
-  - Intent prose must appear between H3 header and code block
+  - Intent statement must appear between H3 header and code block
   - Section-level (H2) intent does not count for individual tests
   - Each test case needs its own WHY
 Because users must know where to place intent for it to be recognized
@@ -216,7 +216,7 @@ Given a Python spec test:
 
 When porting to Rust
 Then the Rust spec test should have:
-  - Same intent prose (verbatim or equivalent)
+  - Same intent statement (verbatim or equivalent)
   - Rust assertion syntax: // expect: true
 
 Because the user's perception of lag doesn't change with implementation language
