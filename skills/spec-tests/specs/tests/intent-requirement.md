@@ -188,15 +188,13 @@ Technical details belong in the assertion itself. Intent answers: "What breaks f
 the user if this test fails?"
 
 ```
-Given these two intent statements for the same test:
-
-Bad intent: "We use a HashMap with O(1) lookup so this should be fast"
-Good intent: "Users perceive delays over 50ms as laggy on every keystroke"
-
-When evaluating intent quality
-Then the bad intent should be flagged as: technical-not-business
-Because it describes HOW, not WHY users care
-And it doesn't help the LLM understand what's negotiable
+Given the SKILL.md file
+Then it documents that intent should be business-focused, explaining:
+  - Intent answers "what breaks for the user" not "how it's implemented"
+  - Technical details belong in assertions, not intent
+  - Good example: "Users perceive delays over 50ms as laggy on every keystroke"
+  - Bad example: "We use a HashMap with O(1) lookup so this should be fast"
+Because users need guidance on writing effective intent
 ```
 
 ### Intent is Preserved When Porting
