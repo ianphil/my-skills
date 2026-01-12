@@ -100,7 +100,7 @@ most expensive option.
 
 ```
 Given the run_tests_codex.py file
-Then it defaults to "o3" when no model is specified
+Then it defaults to "gpt-5.2-codex" when no model is specified
 Because users expect reasonable out-of-box behavior without configuration
 ```
 

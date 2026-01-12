@@ -236,7 +236,7 @@ class SpecParser:
 class LLMJudge:
     """Uses codex CLI to evaluate test cases against a target."""
 
-    def __init__(self, model: str = "o3"):
+    def __init__(self, model: str = "gpt-5.2-codex"):
         self.model = model
         self._prompt_template = self._load_prompt_template()
 
@@ -397,7 +397,7 @@ class TestRunner:
     RESET = '\033[0m'
     BOLD = '\033[1m'
 
-    def __init__(self, spec_path: Path, target_paths: list[Path], model: str = "o3", test_filter: str = None):
+    def __init__(self, spec_path: Path, target_paths: list[Path], model: str = "gpt-5.2-codex", test_filter: str = None):
         self.spec_path = spec_path
         self.target_paths = target_paths
         self.test_filter = test_filter
@@ -491,7 +491,7 @@ def main():
     )
     parser.add_argument("spec_path", type=Path, help="Path to spec test file or directory of .md files")
     parser.add_argument("--target", type=Path, help="Override target file (normally read from frontmatter)")
-    parser.add_argument("--model", default="o3", help="Codex model to use (default: o3)")
+    parser.add_argument("--model", default="gpt-5.2-codex", help="Codex model to use (default: gpt-5.2-codex)")
     parser.add_argument("--test", help="Run only the test with this name (exact match)")
 
     args = parser.parse_args()
