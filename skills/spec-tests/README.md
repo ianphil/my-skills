@@ -8,6 +8,7 @@ Traditional tests check assertions. Spec tests check **intent**—the business r
 
 ```
 [missing-intent]  → Test has no intent prose, fails immediately
+[missing-assertion] → Test has no assertion code block, fails immediately
 [intent-violated] → Assertion passes but violates stated business requirement
 ```
 
@@ -28,11 +29,11 @@ target: src/auth.py
 Users expect immediate access with correct credentials. Friction here
 directly impacts conversion—users abandon apps that make login difficult.
 
-​```
+```
 Given a user with valid email and password
 When they submit the login form
 Then they are redirected to the dashboard
-​```
+```
 ```
 
 2. Copy the runner to your project:
@@ -69,7 +70,9 @@ skills/spec-tests/
 ├── SKILL.md              # Full documentation (Claude reads this)
 ├── README.md             # This file
 ├── scripts/
-│   ├── run_tests_claude.py   # Test runner
+│   ├── run_tests_claude.py   # Test runner (claude)
+│   ├── run_tests_opencode.py # Test runner (opencode)
+│   ├── run_tests_codex.py    # Test runner (codex)
 │   └── judge_prompt.md       # LLM judge prompt template
 └── specs/tests/          # Spec tests for this skill (dogfooding)
     ├── intent-requirement.md

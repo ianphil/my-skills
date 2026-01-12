@@ -1,0 +1,13 @@
+{
+  "id": "msg_baf81c0f4001zSpH9egCDEJ5NR",
+  "sessionID": "ses_4507e3f45ffelEfh27eNy5UQp1",
+  "role": "user",
+  "time": {
+    "created": 1768176074996
+  },
+  "agent": "build",
+  "model": {
+    "providerID": "github-copilot",
+    "modelID": "claude-sonnet-4.5"
+  }
+}

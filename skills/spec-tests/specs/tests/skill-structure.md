@@ -3,6 +3,7 @@ target:
   - SKILL.md
   - scripts/run_tests_claude.py
   - scripts/run_tests_opencode.py
+  - scripts/run_tests_codex.py
 ---
 # Skill Structure Requirements
 
@@ -56,13 +57,29 @@ correctly extract H2 sections and H3 test cases, users get confusing failures
 even when their spec files follow the documented format.
 
 ```
-Given run_tests_claude.py and run_tests_opencode.py
-Then both have a SpecParser class that:
+Given run_tests_claude.py, run_tests_opencode.py, and run_tests_codex.py
+Then all have a SpecParser class that:
   - Tracks H2 (##) headers as section names
   - Extracts H3 (###) headers as test case names
   - Collects prose between H3 and code block as intent
   - Extracts code block content as assertion
 Because the implementation must match the documented structure
+```
+
+### Runner Flags Missing Assertion Block
+
+A test without a code block is malformed. The runner should fail fast with a
+clear error rather than skipping the test or mis-attaching later blocks.
+
+```
+Given run_tests_claude.py, run_tests_opencode.py, and run_tests_codex.py parse a spec test with this content:
+  ### Missing Assertion
+  Intent explaining why this matters.
+
+When the SpecParser extracts test cases
+Then it should set missing_assertion=True for this test
+And the runner should report: [missing-assertion]
+Because tests without assertion blocks cannot be evaluated
 ```
 
 ---

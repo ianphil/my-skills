@@ -2,7 +2,9 @@
 
 You are evaluating whether a target implementation satisfies a spec test.
 
-**CRITICAL: You must respond with ONLY a JSON object. No other text, no markdown, no explanations outside the JSON.**
+**CRITICAL: You must respond with ONLY a JSON object.**
+No other text, no markdown, no code fences, no language labels, no explanations outside the JSON.
+Do not wrap the JSON in backticks or ```json.
 
 ## What Are Spec Tests?
 
@@ -43,12 +45,10 @@ Assertions typically use **Given/When/Then** format:
 - **When** — The action or trigger being tested
 - **Then** — The expected outcome that must be true
 
-Example:
-```
+Example (lines):
 Given a user with valid credentials
 When they submit the login form
 Then they are redirected to the dashboard
-```
 
 Evaluate whether the target implementation would produce the expected outcome when the given precondition is met and the action is performed.
 
@@ -58,9 +58,9 @@ Evaluate whether the target implementation would produce the expected outcome wh
 
 **File:** {{target_name}}
 
-```
+BEGIN_TARGET
 {{target_content}}
-```
+END_TARGET
 
 ---
 
@@ -73,9 +73,9 @@ Evaluate whether the target implementation would produce the expected outcome wh
 {{intent}}
 
 **Assertion (WHAT must be true):**
-```
+BEGIN_ASSERTION
 {{assertion_block}}
-```
+END_ASSERTION
 
 ---
 
@@ -87,7 +87,7 @@ Evaluate whether the target implementation would produce the expected outcome wh
 - Intent: "Users expect immediate access with correct credentials"
 - Assertion: "Then they are redirected to the dashboard"
 
-**Result:** `{"passed": true, "reasoning": "Redirects to dashboard on valid login."}`
+**Result:** {"passed": true, "reasoning": "Redirects to dashboard on valid login."}
 
 ### Example 2: FAIL (assertion not met)
 
@@ -95,7 +95,7 @@ Evaluate whether the target implementation would produce the expected outcome wh
 - Intent: "Users expect immediate access"
 - Assertion: "Then they are redirected to the dashboard"
 
-**Result:** `{"passed": false, "reasoning": "[assertion-failed] Shows error page instead of dashboard."}`
+**Result:** {"passed": false, "reasoning": "[assertion-failed] Shows error page instead of dashboard."}
 
 ### Example 3: FAIL (intent violated)
 
@@ -103,7 +103,7 @@ Evaluate whether the target implementation would produce the expected outcome wh
 - Intent: "Users perceive delays over 50ms as laggy. This runs on every keystroke."
 - Assertion (modified): "completes in under 200ms"
 
-**Result:** `{"passed": false, "reasoning": "[intent-violated] 150ms exceeds 50ms UX threshold stated in intent."}`
+**Result:** {"passed": false, "reasoning": "[intent-violated] 150ms exceeds 50ms UX threshold stated in intent."}
 
 ---
 
@@ -120,7 +120,8 @@ Be strict in your evaluation:
 
 ## Your Response
 
-**IMPORTANT: Output ONLY a JSON object. No markdown, no code blocks, no other text.**
+**IMPORTANT: Output ONLY a JSON object.**
+No markdown, no code blocks, no backticks, no language labels, no other text.
 
 **Keep reasoning under 100 characters.** Be terse. No code snippets in reasoning.
 

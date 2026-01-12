@@ -37,6 +37,8 @@ from typing import Optional
 
 # Prompt template file location (sibling to this script)
 JUDGE_PROMPT_FILE = Path(__file__).parent / "judge_prompt.md"
+OPENCODE_FORMAT = "json"
+RUN_TIMEOUT = 180
 
 
 def parse_frontmatter(content: str) -> tuple[dict, str]:
@@ -50,7 +52,7 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
         return {}, content
 
     # Find the closing ---
-    end_match = re.search(r'\n---\s*\n', content[3:])
+    end_match = re.search(r'\n---\s*(?:\n|$)', content[3:])
     if not end_match:
         return {}, content
 
@@ -142,6 +144,7 @@ class TestCase:
     assertion_block: str
     line_number: int
     missing_intent: bool = False  # True if test has assertion but no intent
+    missing_assertion: bool = False  # True if test has no code block
 
 
 @dataclass
@@ -185,7 +188,13 @@ class SpecParser:
 
                 # Collect intent prose until we hit a code block
                 intent_lines = []
-                while i < len(self.lines) and not self.lines[i].startswith('```'):
+                missing_assertion = False
+                while i < len(self.lines):
+                    if self.lines[i].startswith('```'):
+                        break
+                    if self.lines[i].startswith('## ') or self.lines[i].startswith('### '):
+                        missing_assertion = True
+                        break
                     if self.lines[i].strip():  # Skip empty lines for intent
                         intent_lines.append(self.lines[i])
                     i += 1
@@ -200,19 +209,22 @@ class SpecParser:
                         assertion_lines.append(self.lines[i])
                         i += 1
                     i += 1  # Skip closing ```
+                else:
+                    missing_assertion = True
 
                 assertion_block = '\n'.join(assertion_lines).strip()
 
                 # Include test if it has an assertion block (even without intent)
                 # Missing intent will be flagged as a failure during evaluation
-                if assertion_block:
+                if assertion_block or missing_assertion:
                     tests.append(TestCase(
                         name=test_name,
                         section=current_section,
                         intent=intent,
                         assertion_block=assertion_block,
                         line_number=test_line,
-                        missing_intent=not intent
+                        missing_intent=not intent,
+                        missing_assertion=missing_assertion
                     ))
                 continue
 
@@ -249,8 +261,38 @@ class LLMJudge:
             .replace("{{assertion_block}}", test.assertion_block)
         )
 
+    def _extract_text_from_events(self, output: str) -> tuple[str, list[str]]:
+        """Extract text from opencode JSON event stream."""
+        text_parts = []
+        event_errors = []
+        for line in output.splitlines():
+            if not line.strip():
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            event_type = event.get("type")
+            if event_type == "text":
+                part = event.get("part", {})
+                text = part.get("text")
+                if text:
+                    text_parts.append(text)
+            elif event_type == "error":
+                event_errors.append(event.get("error") or str(event))
+        return "".join(text_parts).strip(), event_errors
+
     def evaluate(self, test: TestCase, target_content: str, target_name: str) -> TestResult:
         """Evaluate a single test case against the target content."""
+
+        # Fail immediately if intent is missing - don't even call the LLM
+        if test.missing_assertion:
+            return TestResult(
+                test=test,
+                passed=False,
+                reasoning="[missing-assertion] Test has no assertion code block. Add a "
+                          "fenced code block after the intent."
+            )
 
         # Fail immediately if intent is missing - don't even call the LLM
         if test.missing_intent:
@@ -263,64 +305,86 @@ class LLMJudge:
             )
 
         prompt = self._render_prompt(test, target_content, target_name)
+        retry_prompt_suffix = (
+            "\n\nREMINDER: Output ONLY a JSON object. No markdown, no code fences."
+        )
+        max_retries = 2
 
         try:
-            result = subprocess.run(
-                [
-                    "opencode", "run",
-                    "-m", self.model,
-                    "--format", "default",
-                ],
-                input=prompt,
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-
-            if result.returncode != 0:
-                return TestResult(
-                    test=test,
-                    passed=False,
-                    reasoning="",
-                    error=f"opencode CLI failed: {result.stderr}"
+            response_text = ""
+            last_error = ""
+            for attempt in range(max_retries):
+                run_prompt = prompt if attempt == 0 else prompt + retry_prompt_suffix
+                result = subprocess.run(
+                    [
+                        "opencode", "run",
+                        "-m", self.model,
+                        "--format", OPENCODE_FORMAT,
+                    ],
+                    input=run_prompt,
+                    capture_output=True,
+                    text=True,
+                    timeout=RUN_TIMEOUT
                 )
 
-            response_text = result.stdout.strip()
+                if result.returncode != 0:
+                    return TestResult(
+                        test=test,
+                        passed=False,
+                        reasoning="",
+                        error=f"opencode CLI failed: {result.stderr}"
+                    )
 
-            # Extract JSON from response (handle markdown code blocks)
-            if '```' in response_text:
-                # Find JSON between code blocks
-                match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
-                if match:
-                    response_text = match.group(1).strip()
+                response_text = result.stdout.strip()
+                event_errors = []
+                if OPENCODE_FORMAT == "json":
+                    response_text, event_errors = self._extract_text_from_events(response_text)
+                    if event_errors and not response_text:
+                        last_error = f"opencode event error: {event_errors[0]}"
+                        continue
 
-            # Try to find JSON object in response
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
-            if json_start >= 0 and json_end > json_start:
-                response_text = response_text[json_start:json_end]
+                if not response_text:
+                    last_error = "opencode returned empty response"
+                    continue
 
-            parsed = json.loads(response_text)
+                # Extract JSON from response (handle markdown code blocks)
+                if '```' in response_text:
+                    # Find JSON between code blocks
+                    match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
+                    if match:
+                        response_text = match.group(1).strip()
 
-            return TestResult(
-                test=test,
-                passed=parsed.get('passed', False),
-                reasoning=parsed.get('reasoning', 'No reasoning provided')
-            )
+                # Try to find JSON object in response
+                json_start = response_text.find('{')
+                json_end = response_text.rfind('}') + 1
+                if json_start >= 0 and json_end > json_start:
+                    response_text = response_text[json_start:json_end]
 
-        except json.JSONDecodeError as e:
+                try:
+                    parsed = json.loads(response_text)
+                except json.JSONDecodeError as e:
+                    last_error = f"Failed to parse response as JSON: {e}"
+                    continue
+
+                return TestResult(
+                    test=test,
+                    passed=parsed.get('passed', False),
+                    reasoning=parsed.get('reasoning', 'No reasoning provided')
+                )
+
             return TestResult(
                 test=test,
                 passed=False,
                 reasoning="",
-                error=f"Failed to parse response as JSON: {e}\nResponse: {response_text[:500]}"
+                error=f"{last_error}\nResponse: {response_text[:500]}"
             )
+
         except subprocess.TimeoutExpired:
             return TestResult(
                 test=test,
                 passed=False,
                 reasoning="",
-                error="opencode CLI timed out after 120 seconds"
+                error=f"opencode CLI timed out after {RUN_TIMEOUT} seconds"
             )
         except Exception as e:
             return TestResult(

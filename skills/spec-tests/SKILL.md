@@ -3,7 +3,7 @@ name: spec-tests
 description: >
   Intent-based specification tests evaluated by LLM-as-judge. Use when the user
   asks to "create spec tests", "TDD with intent", or wants tests that capture
-  WHY, not just WHAT. NOT pytest/jest - natural language specs Claude evaluates.
+  WHY, not just WHAT. NOT pytest/jest/unittest - natural language specs Claude evaluates.
 ---
 
 # Spec Tests: Intent-Based Testing for LLM Development
@@ -43,6 +43,8 @@ Then [expected outcome]
 Structure: **H2** = test group, **H3** = test case, **prose** = required intent, **code block** = expected behavior.
 
 **Critical:** Intent prose must appear **immediately above** the code block, between the H3 header and the assertion block. Intent at the H2 section level does not count—each test case (H3) needs its own WHY prose directly before its code block. If a test has section-level intent but no per-test intent, the runner reports `[missing-intent]` and fails.
+
+Each test must include a fenced code block. Missing code blocks fail with `[missing-assertion]`.
 
 ---
 
@@ -337,6 +339,7 @@ This dual evaluation catches "legal but wrong" solutions that traditional assert
 - [ ] Each test has intent prose explaining WHY
 - [ ] Intent is business/user focused
 - [ ] Expected behavior is clear
+- [ ] Each test includes a fenced assertion code block
 - [ ] One behavior per test case
 - [ ] Multi-target specs: each test starts with `Given the <target> file`
 - [ ] Shared requirements: use `Given <file1> and <file2>` when same test applies to multiple files

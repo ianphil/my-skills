@@ -51,7 +51,7 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
         return {}, content
 
     # Find the closing ---
-    end_match = re.search(r'\n---\s*\n', content[3:])
+    end_match = re.search(r'\n---\s*(?:\n|$)', content[3:])
     if not end_match:
         return {}, content
 
@@ -143,6 +143,7 @@ class TestCase:
     assertion_block: str
     line_number: int
     missing_intent: bool = False  # True if test has assertion but no intent
+    missing_assertion: bool = False  # True if test has no code block
 
 
 @dataclass
@@ -186,7 +187,13 @@ class SpecParser:
 
                 # Collect intent prose until we hit a code block
                 intent_lines = []
-                while i < len(self.lines) and not self.lines[i].startswith('```'):
+                missing_assertion = False
+                while i < len(self.lines):
+                    if self.lines[i].startswith('```'):
+                        break
+                    if self.lines[i].startswith('## ') or self.lines[i].startswith('### '):
+                        missing_assertion = True
+                        break
                     if self.lines[i].strip():  # Skip empty lines for intent
                         intent_lines.append(self.lines[i])
                     i += 1
@@ -201,19 +208,22 @@ class SpecParser:
                         assertion_lines.append(self.lines[i])
                         i += 1
                     i += 1  # Skip closing ```
+                else:
+                    missing_assertion = True
 
                 assertion_block = '\n'.join(assertion_lines).strip()
 
                 # Include test if it has an assertion block (even without intent)
                 # Missing intent will be flagged as a failure during evaluation
-                if assertion_block:
+                if assertion_block or missing_assertion:
                     tests.append(TestCase(
                         name=test_name,
                         section=current_section,
                         intent=intent,
                         assertion_block=assertion_block,
                         line_number=test_line,
-                        missing_intent=not intent
+                        missing_intent=not intent,
+                        missing_assertion=missing_assertion
                     ))
                 continue
 
@@ -252,6 +262,15 @@ class LLMJudge:
 
     def evaluate(self, test: TestCase, target_content: str, target_name: str) -> TestResult:
         """Evaluate a single test case against the target content."""
+
+        # Fail immediately if intent is missing - don't even call the LLM
+        if test.missing_assertion:
+            return TestResult(
+                test=test,
+                passed=False,
+                reasoning="[missing-assertion] Test has no assertion code block. Add a "
+                          "fenced code block after the intent."
+            )
 
         # Fail immediately if intent is missing - don't even call the LLM
         if test.missing_intent:
