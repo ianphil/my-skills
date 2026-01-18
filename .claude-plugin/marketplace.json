@@ -18,6 +18,7 @@
       "skills": [
         "./skills/astral-uv",
         "./skills/conversation-logging",
+        "./skills/glab",
         "./skills/spec-tests",
         "./skills/tmux-tdd"
       ]
