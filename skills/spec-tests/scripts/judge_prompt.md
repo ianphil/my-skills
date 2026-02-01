@@ -56,11 +56,12 @@ Evaluate whether the target implementation would produce the expected outcome wh
 
 ## Target Under Evaluation
 
-**File:** {{target_name}}
+**IMPORTANT:** Use your Read tool to access the target file(s) before evaluating.
 
-BEGIN_TARGET
-{{target_content}}
-END_TARGET
+**Target file(s) to read:**
+{{target_files}}
+
+Read each file listed above. Do NOT assume content—you must read the actual files.
 
 ---
 

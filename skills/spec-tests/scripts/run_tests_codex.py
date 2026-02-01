@@ -418,13 +418,11 @@ class LLMJudge:
             )
         return JUDGE_PROMPT_FILE.read_text()
 
-    def _render_prompt(
-        self, test: TestCase, target_content: str, target_name: str
-    ) -> str:
+    def _render_prompt(self, test: TestCase, target_paths: list[Path]) -> str:
         """Substitute placeholders in the prompt template."""
+        target_files = "\n".join(f"- {p.absolute()}" for p in target_paths)
         return (
-            self._prompt_template.replace("{{target_name}}", target_name)
-            .replace("{{target_content}}", target_content)
+            self._prompt_template.replace("{{target_files}}", target_files)
             .replace("{{test_name}}", test.name)
             .replace("{{test_section}}", test.section)
             .replace("{{intent}}", test.intent)
@@ -439,9 +437,7 @@ class LLMJudge:
                 return content
         return fallback.strip()
 
-    def evaluate(
-        self, test: TestCase, target_content: str, target_name: str
-    ) -> TestResult:
+    def evaluate(self, test: TestCase, target_paths: list[Path]) -> TestResult:
         """Evaluate a single test case against the target content."""
 
         # Fail immediately if assertion is missing - don't even call the LLM
@@ -463,7 +459,7 @@ class LLMJudge:
                 "and the code block.",
             )
 
-        prompt = self._render_prompt(test, target_content, target_name)
+        prompt = self._render_prompt(test, target_paths)
         retry_prompt_suffix = (
             "\n\nREMINDER: Output ONLY a JSON object. No markdown, no code fences."
         )
@@ -583,25 +579,16 @@ class TestRunner:
         self.test_filter = test_filter
         self.judge = LLMJudge(model=model)
 
-    def _load_targets(self) -> tuple[str, str]:
-        """Load and concatenate target file contents. Returns (content, display_name)."""
-        if len(self.target_paths) == 1:
-            return self.target_paths[0].read_text(), self.target_paths[0].name
-
-        # Multiple targets - concatenate with headers
-        parts = []
-        names = []
-        for path in self.target_paths:
-            parts.append(f"# File: {path}\n\n{path.read_text()}")
-            names.append(path.name)
-        return "\n\n---\n\n".join(parts), ", ".join(names)
+    def _get_absolute_paths(self) -> list[Path]:
+        """Return absolute paths to target files."""
+        return [p.absolute() for p in self.target_paths]
 
     def run(self) -> tuple[int, int]:
         """Run all tests and return (passed, total) counts."""
 
         # Load files
         spec_content = self.spec_path.read_text()
-        target_content, target_name = self._load_targets()
+        target_paths = self._get_absolute_paths()
 
         # Parse tests
         parser = SpecParser(spec_content)
@@ -642,7 +629,7 @@ class TestRunner:
                 flush=True,
             )
 
-            result = self.judge.evaluate(test, target_content, target_name)
+            result = self.judge.evaluate(test, target_paths)
 
             if result.error:
                 status = f"{self.RED}ERROR{self.RESET}"
