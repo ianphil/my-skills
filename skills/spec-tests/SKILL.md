@@ -122,6 +122,16 @@ python specs/tests/run_tests_claude.py specs/tests/auth.md --dry-run | python -m
 python specs/tests/run_tests_claude.py specs/tests/auth.md --dry-run --test "Valid Credentials"
 ```
 
+**Re-running failures:** Each test costs an LLM call, so full suite re-runs add up. When a run has failures, the runner saves them to `.spec-tests-failures.json`. After fixing code, use `--rerun-failed` to re-evaluate only what broke — skipping tests that already passed.
+
+```bash
+python specs/tests/run_tests_claude.py specs/tests/  # full run — failures saved automatically
+# ... fix the code ...
+python specs/tests/run_tests_claude.py specs/tests/ --rerun-failed  # only broken tests
+```
+
+The failure file is deleted automatically when all tests pass.
+
 **Timeout:** 60-300 seconds per test.
 
 ---
