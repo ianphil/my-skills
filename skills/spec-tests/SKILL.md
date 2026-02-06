@@ -1,6 +1,6 @@
 ---
 name: spec-tests
-version: 1.2.0
+version: 1.4.0
 description: >
   Intent-based specification tests evaluated by LLM-as-judge. Use when the user
   asks to "create spec tests", "write intent tests", "TDD with intent",
@@ -110,6 +110,7 @@ Uses `claude -p` (your subscription, no API key needed).
 | `--model MODEL` | Claude model (default: sonnet) |
 | `--test "Name"` | Run only named test |
 | `--dry-run` | Parse spec and output IR as JSON (no LLM call) |
+| `--rerun-failed` | Re-run only tests that failed in the previous run |
 
 **Inspecting Parsed IR:**
 

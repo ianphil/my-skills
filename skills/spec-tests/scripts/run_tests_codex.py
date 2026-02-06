@@ -38,6 +38,7 @@ from typing import Optional
 
 # Prompt template file location (sibling to this script)
 JUDGE_PROMPT_FILE = Path(__file__).parent / "judge_prompt.md"
+FAILURE_FILE = Path(".spec-tests-failures.json")
 RUN_TIMEOUT = 180
 
 
@@ -402,6 +403,24 @@ class SpecParser:
         return tests
 
 
+def load_failures(failure_path: Path) -> list[dict]:
+    if not failure_path.exists():
+        return []
+    try:
+        data = json.loads(failure_path.read_text())
+        return data.get("failures", [])
+    except (json.JSONDecodeError, KeyError):
+        return []
+
+
+def save_failures(failure_path: Path, failures: list[dict]) -> None:
+    if not failures:
+        failure_path.unlink(missing_ok=True)
+        return
+    data = {"version": 1, "failures": failures}
+    failure_path.write_text(json.dumps(data, indent=2) + "\n")
+
+
 def build_ir_dict(spec_path: Path, target_paths: list[Path], tests: list[TestCase]) -> dict:
     """Build the inspectable intermediate representation as a plain dict."""
     return {
@@ -593,18 +612,20 @@ class TestRunner:
         target_paths: list[Path],
         model: str = "gpt-5.2-codex",
         test_filter: str = None,
+        test_names_filter: list[str] = None,
     ):
         self.spec_path = spec_path
         self.target_paths = target_paths
         self.test_filter = test_filter
+        self.test_names_filter = test_names_filter
         self.judge = LLMJudge(model=model)
 
     def _get_absolute_paths(self) -> list[Path]:
         """Return absolute paths to target files."""
         return [p.absolute() for p in self.target_paths]
 
-    def run(self) -> tuple[int, int]:
-        """Run all tests and return (passed, total) counts."""
+    def run(self) -> tuple[int, int, list[str]]:
+        """Run all tests and return (passed, total, failed_names)."""
 
         # Load files
         spec_content = self.spec_path.read_text()
@@ -616,7 +637,7 @@ class TestRunner:
 
         if not tests:
             print(f"{self.YELLOW}No tests found in {self.spec_path}{self.RESET}")
-            return 0, 0
+            return 0, 0, []
 
         # Filter by test name if specified
         if self.test_filter:
@@ -625,7 +646,16 @@ class TestRunner:
                 print(
                     f"{self.YELLOW}No test named '{self.test_filter}' found{self.RESET}"
                 )
-                return 0, 0
+                return 0, 0, []
+
+        # Filter by test names list (for --rerun-failed)
+        if self.test_names_filter:
+            tests = [t for t in tests if t.name in self.test_names_filter]
+            if not tests:
+                print(
+                    f"{self.YELLOW}No matching failed tests in {self.spec_path}{self.RESET}"
+                )
+                return 0, 0, []
 
         # Format target display
         if len(self.target_paths) == 1:
@@ -641,6 +671,7 @@ class TestRunner:
 
         passed = 0
         failed = 0
+        failed_names = []
 
         for test in tests:
             print(
@@ -654,12 +685,14 @@ class TestRunner:
             if result.error:
                 status = f"{self.RED}ERROR{self.RESET}"
                 failed += 1
+                failed_names.append(test.name)
             elif result.passed:
                 status = f"{self.GREEN}PASS{self.RESET}"
                 passed += 1
             else:
                 status = f"{self.RED}FAIL{self.RESET}"
                 failed += 1
+                failed_names.append(test.name)
 
             print(status)
 
@@ -677,7 +710,7 @@ class TestRunner:
                 f"{self.RED}{self.BOLD}{failed} failed{self.RESET}, {self.GREEN}{passed} passed{self.RESET}"
             )
 
-        return passed, len(tests)
+        return passed, len(tests), failed_names
 
 
 def main():
@@ -703,8 +736,17 @@ def main():
         action="store_true",
         help="Parse spec and output IR as JSON without running LLM judge",
     )
+    parser.add_argument(
+        "--rerun-failed",
+        action="store_true",
+        help="Re-run only tests that failed in the previous run",
+    )
 
     args = parser.parse_args()
+
+    if args.rerun_failed and args.test:
+        print("Error: --rerun-failed and --test are mutually exclusive")
+        sys.exit(1)
 
     if not args.spec_path.exists():
         print(f"Error: Spec path not found: {args.spec_path}")
@@ -727,10 +769,29 @@ def main():
     else:
         spec_files = [args.spec_path]
 
+    # Handle --rerun-failed
+    rerun_filter = {}
+    if args.rerun_failed:
+        prev_failures = load_failures(FAILURE_FILE)
+        if not prev_failures:
+            print("No previous failures found. Nothing to re-run.")
+            sys.exit(0)
+        for entry in prev_failures:
+            spec_key = entry.get("spec_file", "")
+            test_name = entry.get("test_name", "")
+            rerun_filter.setdefault(spec_key, set()).add(test_name)
+        spec_files = [
+            sf for sf in spec_files if str(sf.resolve()) in rerun_filter
+        ]
+        if not spec_files:
+            print("No previous failures match current spec files. Nothing to re-run.")
+            sys.exit(0)
+
     # Run all spec files
     total_passed = 0
     total_tests = 0
     dry_run_results = []
+    all_failures = []
 
     for spec_file in spec_files:
         # Get targets from frontmatter (or use CLI override)
@@ -750,12 +811,25 @@ def main():
                 tests = [t for t in tests if t.name == args.test]
             dry_run_results.append(build_ir_dict(spec_file, target_paths, tests))
         else:
+            names_filter = None
+            if rerun_filter:
+                resolved = str(spec_file.resolve())
+                names_filter = list(rerun_filter.get(resolved, []))
+
             runner = TestRunner(
-                spec_file, target_paths, model=args.model, test_filter=args.test
+                spec_file,
+                target_paths,
+                model=args.model,
+                test_filter=args.test,
+                test_names_filter=names_filter,
             )
-            passed, total = runner.run()
+            passed, total, failed_names = runner.run()
             total_passed += passed
             total_tests += total
+            for name in failed_names:
+                all_failures.append(
+                    {"spec_file": str(spec_file.resolve()), "test_name": name}
+                )
 
     if args.dry_run:
         if len(dry_run_results) == 1:
@@ -763,6 +837,11 @@ def main():
         else:
             print(json.dumps(dry_run_results, indent=2))
         sys.exit(0)
+
+    # Save failure file
+    save_failures(FAILURE_FILE, all_failures)
+    if all_failures:
+        print(f"\nFailures saved to {FAILURE_FILE} — re-run with --rerun-failed")
 
     # Final summary if multiple files
     if len(spec_files) > 1:

@@ -4,3 +4,4 @@ __pycache__/
 .opencode/
 .claude/settings.local.json
 .ruff_cache/
+.spec-tests-failures.json
