@@ -51,3 +51,7 @@ The judge prompt would resolve `$auth` to the actual file content and
 - Tests are resilient to file restructuring
 - Constants are defined once (in code) and referenced symbolically
 - Reduces brittle hard-coded values in assertions
+
+## Reference
+
+- [Uncle Bob's Acceptance Tests README](https://github.com/unclebob/empire-2025/blob/master/acceptanceTests/README.md) — referenceable cells (`=`, `%`) as symbolic landmarks in map notation

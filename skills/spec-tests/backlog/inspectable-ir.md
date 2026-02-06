@@ -46,3 +46,7 @@ This could be:
 - Debug parsing issues without re-running the LLM judge
 - Validate that frontmatter, intent, and assertions were correctly extracted
 - Enable tooling that consumes the IR (editors, CI dashboards)
+
+## Reference
+
+- [Uncle Bob's Acceptance Tests README](https://github.com/unclebob/empire-2025/blob/master/acceptanceTests/README.md) — three-stage pipeline (parse → EDN IR → Speclj specs)

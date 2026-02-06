@@ -54,3 +54,7 @@ patterns: specs/patterns.md
 - Consistent setup language across a test suite
 - Less boilerplate in individual test files
 - Judge has explicit expansion context for accurate evaluation
+
+## Reference
+
+- [Uncle Bob's Acceptance Tests README](https://github.com/unclebob/empire-2025/blob/master/acceptanceTests/README.md) — `GIVEN A is waiting for input` silently expands to multi-step setup

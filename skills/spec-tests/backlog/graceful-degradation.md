@@ -38,3 +38,7 @@ Implementation:
 - One broken test doesn't block feedback on the rest of the suite
 - Authors can iteratively fix structural issues while still getting results
 - Clear distinction between "test evaluated and failed" vs "test couldn't be evaluated"
+
+## Reference
+
+- [Uncle Bob's Acceptance Tests README](https://github.com/unclebob/empire-2025/blob/master/acceptanceTests/README.md) — unrecognized patterns emit `(pending ...)` instead of crashing the suite

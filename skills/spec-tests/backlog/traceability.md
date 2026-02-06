@@ -34,3 +34,7 @@ Implementation steps:
 - Click-to-navigate from terminal output to the failing spec
 - Faster debugging in large test suites
 - Consistent with how compilers and linters report errors
+
+## Reference
+
+- [Uncle Bob's Acceptance Tests README](https://github.com/unclebob/empire-2025/blob/master/acceptanceTests/README.md) — generated test names include `filename:line` for traceability

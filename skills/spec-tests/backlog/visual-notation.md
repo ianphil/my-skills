@@ -83,3 +83,7 @@ produces corrupt data that silently propagates to dashboards.
 - LLM judge interprets visual notation naturally
 - Reduces verbose prose for relationships that are better shown than described
 - Aligns with how developers actually think about these domains
+
+## Reference
+
+- [Uncle Bob's Acceptance Tests README](https://github.com/unclebob/empire-2025/blob/master/acceptanceTests/README.md) — ASCII map literals for spatial game state in test files
