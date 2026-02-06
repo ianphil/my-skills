@@ -19,11 +19,13 @@ This dual evaluation catches "legal but wrong" solutions that traditional assert
 ## Error Codes
 
 **Runner errors** (caught before LLM evaluation):
-| Code | Meaning |
-|------|---------|
-| `[missing-intent]` | Test has no intent statement above code block |
-| `[missing-assertion]` | Test has no code block |
-| `[missing-target]` | Spec file has no target in frontmatter |
+| Code | Meaning | Status |
+|------|---------|--------|
+| `[missing-intent]` | Test has no intent statement above code block | SKIP |
+| `[missing-assertion]` | Test has no code block | SKIP |
+| `[missing-target]` | Spec file has no target in frontmatter | Fatal (exit 1) |
+
+Structural issues (`[missing-intent]`, `[missing-assertion]`) produce SKIP status — they don't count as failures, don't pollute `--rerun-failed`, and don't cause exit code 1.
 
 **Judge error codes** (returned by LLM evaluation):
 | Code | Meaning |

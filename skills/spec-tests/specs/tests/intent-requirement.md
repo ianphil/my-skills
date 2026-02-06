@@ -69,7 +69,7 @@ Given the SKILL.md file
 Then it documents that:
   - Intent statement is required for every test
   - Intent must explain WHY the test matters
-  - Missing intent causes immediate failure with [missing-intent]
+  - Missing intent causes immediate skip with [missing-intent]
 Because users must understand intent is mandatory, not optional
 ```
 
@@ -235,29 +235,29 @@ And the test passes only if BOTH are true
 
 ### Documents Early Failure for Missing Intent
 
-The skill must explain that missing intent causes immediate failure before
+The skill must explain that missing intent causes immediate skip before
 evaluation. Users need to understand this isn't a warning—evaluation without
 intent is undefined and the runner won't attempt it.
 
 ```
 Given the SKILL.md file
 Then it documents that:
-  - Missing intent causes immediate failure
+  - Missing intent causes immediate skip
   - The assertion is not evaluated when intent is missing
   - The error code is [missing-intent]
 Because users must understand evaluation requires intent
 ```
 
-### Runner Fails Early for Missing Intent
+### Runner Skips Early for Missing Intent
 
-If intent is missing, the test cannot be properly evaluated. The failure should
+If intent is missing, the test cannot be properly evaluated. The skip should
 be reported immediately without attempting to run the assertion, because any
 result would be meaningless without knowing what's being tested.
 
 ```
 Given run_tests_claude.py, run_tests_opencode.py, and run_tests_codex.py evaluate a test with missing_intent=True
 When the LLMJudge.evaluate() method is called
-Then it should immediately return a failed TestResult with [missing-intent]
+Then it should immediately return a skipped TestResult with [missing-intent]
 And should NOT invoke the LLM CLI
 Because evaluation without intent is undefined
 ```

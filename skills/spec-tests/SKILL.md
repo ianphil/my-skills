@@ -1,6 +1,6 @@
 ---
 name: spec-tests
-version: 1.4.1
+version: 1.5.0
 description: >
   Intent-based specification tests evaluated by LLM-as-judge. Use when the user
   asks to "create spec tests", "write intent tests", "TDD with intent",
@@ -46,7 +46,7 @@ Structure: **H2** = test group, **H3** = test case, **intent** = required statem
 
 **Critical:** Intent statement must appear **immediately above** the code block, between the H3 header and the assertion block. Section-level intent does not count—each test case needs its own WHY directly before its code block.
 
-Each test must include a fenced code block. Missing code blocks fail with `[missing-assertion]`.
+Each test must include a fenced code block. Missing code blocks are skipped with `[missing-assertion]`.
 
 ---
 
@@ -140,7 +140,7 @@ The failure file is deleted automatically when all tests pass.
 
 LLMs can "game" tests by changing them instead of fixing code.
 
-**Without intent** (fails with `[missing-intent]}):
+**Without intent** (skipped with `[missing-intent]`):
 ```markdown
 ### Completes Quickly
 \`\`\`
@@ -166,7 +166,7 @@ Then it completes in under 50ms
 Claude-as-judge evaluates: Does it satisfy the UX requirement? Relaxing threshold → `[intent-violated]`.
 
 **Intent properties:**
-- **Required** — Missing intent → `[missing-intent]` before evaluation
+- **Required** — Missing intent → `[missing-intent]` skip before evaluation
 - **Per-test** — Each test needs its own WHY above the code block
 - **Business-focused** — Why users/product care, not technical details
 - **Evaluative** — Catches "legal but wrong" solutions
@@ -193,4 +193,14 @@ For detailed patterns, consult:
 - [ ] One behavior per test case
 - [ ] Multi-target specs: each test starts with `Given the <target> file`
 
-> **Missing intent = immediate failure.** The runner rejects tests without intent statements before evaluating behavior.
+> **Missing intent = immediate skip.** The runner skips tests without intent statements before evaluating behavior. Skipped tests don't cause exit code 1.
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | All evaluated tests passed (skips are OK) |
+| `1` | At least one real test failure |
+| `2` | All tests were skipped (none evaluated) |

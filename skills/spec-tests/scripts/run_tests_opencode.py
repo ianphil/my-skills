@@ -320,6 +320,7 @@ class TestResult:
     passed: bool
     reasoning: str
     error: Optional[str] = None
+    skipped: bool = False
 
 
 class SpecParser:
@@ -492,16 +493,17 @@ class LLMJudge:
     def evaluate(self, test: TestCase, target_paths: list[Path]) -> TestResult:
         """Evaluate a single test case against the target content."""
 
-        # Fail immediately if intent is missing - don't even call the LLM
+        # Skip immediately if assertion is missing - don't even call the LLM
         if test.missing_assertion:
             return TestResult(
                 test=test,
                 passed=False,
                 reasoning="[missing-assertion] Test has no assertion code block. Add a "
                 "fenced code block after the intent.",
+                skipped=True,
             )
 
-        # Fail immediately if intent is missing - don't even call the LLM
+        # Skip immediately if intent is missing - don't even call the LLM
         if test.missing_intent:
             return TestResult(
                 test=test,
@@ -509,6 +511,7 @@ class LLMJudge:
                 reasoning="[missing-intent] Test has no intent statement. Each test requires "
                 "intent explaining WHY it matters. Add statement between the H3 header "
                 "and the code block.",
+                skipped=True,
             )
 
         prompt = self._render_prompt(test, target_paths)
@@ -632,8 +635,8 @@ class TestRunner:
         """Return absolute paths to target files."""
         return [p.absolute() for p in self.target_paths]
 
-    def run(self) -> tuple[int, int, list[str]]:
-        """Run all tests and return (passed, total, failed_names)."""
+    def run(self) -> tuple[int, int, int, list[str]]:
+        """Run all tests and return (passed, failed, skipped, failed_names)."""
 
         # Load files
         spec_content = self.spec_path.read_text()
@@ -645,7 +648,7 @@ class TestRunner:
 
         if not tests:
             print(f"{self.YELLOW}No tests found in {self.spec_path}{self.RESET}")
-            return 0, 0, []
+            return 0, 0, 0, []
 
         # Filter by test name if specified
         if self.test_filter:
@@ -654,7 +657,7 @@ class TestRunner:
                 print(
                     f"{self.YELLOW}No test named '{self.test_filter}' found{self.RESET}"
                 )
-                return 0, 0, []
+                return 0, 0, 0, []
 
         # Filter by test names list (for --rerun-failed)
         if self.test_names_filter:
@@ -663,7 +666,7 @@ class TestRunner:
                 print(
                     f"{self.YELLOW}No matching failed tests in {self.spec_path}{self.RESET}"
                 )
-                return 0, 0, []
+                return 0, 0, 0, []
 
         # Format target display
         if len(self.target_paths) == 1:
@@ -679,6 +682,7 @@ class TestRunner:
 
         passed = 0
         failed = 0
+        skipped = 0
         failed_names = []
 
         for test in tests:
@@ -690,7 +694,10 @@ class TestRunner:
 
             result = self.judge.evaluate(test, target_paths)
 
-            if result.error:
+            if result.skipped:
+                status = f"{self.YELLOW}SKIP{self.RESET}"
+                skipped += 1
+            elif result.error:
                 status = f"{self.RED}ERROR{self.RESET}"
                 failed += 1
                 failed_names.append(test.name)
@@ -704,21 +711,29 @@ class TestRunner:
 
             print(status)
 
-            if result.error:
+            if result.skipped:
+                print(f"  {self.YELLOW}{result.reasoning}{self.RESET}")
+            elif result.error:
                 print(f"  {self.RED}{result.error}{self.RESET}")
             elif not result.passed:
                 print(f"  {result.reasoning}")
 
         # Summary
         print("\n" + "=" * 60)
-        if failed == 0:
+        summary_parts = []
+        if passed:
+            summary_parts.append(f"{self.GREEN}{passed} passed{self.RESET}")
+        if failed:
+            summary_parts.append(f"{self.RED}{failed} failed{self.RESET}")
+        if skipped:
+            summary_parts.append(f"{self.YELLOW}{skipped} skipped{self.RESET}")
+
+        if failed == 0 and skipped == 0:
             print(f"{self.GREEN}{self.BOLD}All {passed} tests passed{self.RESET}")
         else:
-            print(
-                f"{self.RED}{self.BOLD}{failed} failed{self.RESET}, {self.GREEN}{passed} passed{self.RESET}"
-            )
+            print(f"{self.BOLD}{', '.join(summary_parts)}{self.RESET}")
 
-        return passed, len(tests), failed_names
+        return passed, failed, skipped, failed_names
 
 
 def main():
@@ -797,7 +812,8 @@ def main():
 
     # Run all spec files
     total_passed = 0
-    total_tests = 0
+    total_failed = 0
+    total_skipped = 0
     dry_run_results = []
     all_failures = []
 
@@ -831,9 +847,10 @@ def main():
                 test_filter=args.test,
                 test_names_filter=names_filter,
             )
-            passed, total, failed_names = runner.run()
+            passed, failed, skipped, failed_names = runner.run()
             total_passed += passed
-            total_tests += total
+            total_failed += failed
+            total_skipped += skipped
             for name in failed_names:
                 all_failures.append(
                     {"spec_file": str(spec_file.resolve()), "test_name": name}
@@ -852,18 +869,29 @@ def main():
         print(f"\nFailures saved to {FAILURE_FILE} — re-run with --rerun-failed")
 
     # Final summary if multiple files
+    total_tests = total_passed + total_failed + total_skipped
     if len(spec_files) > 1:
         print(f"\n{'=' * 60}")
         print(f"TOTAL: {len(spec_files)} spec files, {total_tests} tests")
-        if total_passed == total_tests:
+        if total_failed == 0 and total_skipped == 0:
             print(f"\033[92m\033[1mAll {total_passed} tests passed\033[0m")
         else:
-            failed = total_tests - total_passed
-            print(
-                f"\033[91m\033[1m{failed} failed\033[0m, \033[92m{total_passed} passed\033[0m"
-            )
+            parts = []
+            if total_passed:
+                parts.append(f"\033[92m{total_passed} passed\033[0m")
+            if total_failed:
+                parts.append(f"\033[91m{total_failed} failed\033[0m")
+            if total_skipped:
+                parts.append(f"\033[93m{total_skipped} skipped\033[0m")
+            print(", ".join(parts))
 
-    sys.exit(0 if total_passed == total_tests else 1)
+    # Exit codes: 0 = pass (skips OK), 1 = any real failure, 2 = all tests skipped
+    if total_failed > 0:
+        sys.exit(1)
+    elif total_passed == 0 and total_skipped > 0:
+        sys.exit(2)
+    else:
+        sys.exit(0)
 
 
 if __name__ == "__main__":
