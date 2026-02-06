@@ -1,6 +1,6 @@
 ---
 name: spec-tests
-version: 1.4.0
+version: 1.4.1
 description: >
   Intent-based specification tests evaluated by LLM-as-judge. Use when the user
   asks to "create spec tests", "write intent tests", "TDD with intent",
