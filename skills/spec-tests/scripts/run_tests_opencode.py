@@ -402,6 +402,26 @@ class SpecParser:
         return tests
 
 
+def build_ir_dict(spec_path: Path, target_paths: list[Path], tests: list[TestCase]) -> dict:
+    """Build the inspectable intermediate representation as a plain dict."""
+    return {
+        "source": str(spec_path),
+        "target": [str(p) for p in target_paths],
+        "tests": [
+            {
+                "group": t.section,
+                "name": t.name,
+                "intent": t.intent,
+                "assertion": t.assertion_block,
+                "line_number": t.line_number,
+                "missing_intent": t.missing_intent,
+                "missing_assertion": t.missing_assertion,
+            }
+            for t in tests
+        ],
+    }
+
+
 class LLMJudge:
     """Uses opencode CLI to evaluate test cases against a target."""
 
@@ -686,6 +706,11 @@ def main():
         help="Model to use in provider/model format (default: github-copilot/claude-sonnet-4.5)",
     )
     parser.add_argument("--test", help="Run only the test with this name (exact match)")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Parse spec and output IR as JSON without running LLM judge",
+    )
 
     args = parser.parse_args()
 
@@ -693,12 +718,13 @@ def main():
         print(f"Error: Spec path not found: {args.spec_path}")
         sys.exit(1)
 
-    # Check opencode CLI is available
-    try:
-        subprocess.run(["opencode", "--version"], capture_output=True, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print("Error: opencode CLI not found or not working")
-        sys.exit(1)
+    if not args.dry_run:
+        # Check opencode CLI is available
+        try:
+            subprocess.run(["opencode", "--version"], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("Error: opencode CLI not found or not working")
+            sys.exit(1)
 
     # Collect spec files
     if args.spec_path.is_dir():
@@ -712,6 +738,7 @@ def main():
     # Run all spec files
     total_passed = 0
     total_tests = 0
+    dry_run_results = []
 
     for spec_file in spec_files:
         # Get targets from frontmatter (or use CLI override)
@@ -723,12 +750,27 @@ def main():
         else:
             target_paths = get_targets_from_frontmatter(spec_file)
 
-        runner = TestRunner(
-            spec_file, target_paths, model=args.model, test_filter=args.test
-        )
-        passed, total = runner.run()
-        total_passed += passed
-        total_tests += total
+        if args.dry_run:
+            spec_content = spec_file.read_text()
+            parser = SpecParser(spec_content)
+            tests = parser.parse()
+            if args.test:
+                tests = [t for t in tests if t.name == args.test]
+            dry_run_results.append(build_ir_dict(spec_file, target_paths, tests))
+        else:
+            runner = TestRunner(
+                spec_file, target_paths, model=args.model, test_filter=args.test
+            )
+            passed, total = runner.run()
+            total_passed += passed
+            total_tests += total
+
+    if args.dry_run:
+        if len(dry_run_results) == 1:
+            print(json.dumps(dry_run_results[0], indent=2))
+        else:
+            print(json.dumps(dry_run_results, indent=2))
+        sys.exit(0)
 
     # Final summary if multiple files
     if len(spec_files) > 1:

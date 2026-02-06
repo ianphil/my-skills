@@ -109,6 +109,17 @@ Uses `claude -p` (your subscription, no API key needed).
 | `--target FILE` | Override frontmatter target |
 | `--model MODEL` | Claude model (default: sonnet) |
 | `--test "Name"` | Run only named test |
+| `--dry-run` | Parse spec and output IR as JSON (no LLM call) |
+
+**Inspecting Parsed IR:**
+
+```bash
+# See exactly what the parser extracted — no LLM call, no cost
+python specs/tests/run_tests_claude.py specs/tests/auth.md --dry-run | python -m json.tool
+
+# Combine with --test to inspect a single test
+python specs/tests/run_tests_claude.py specs/tests/auth.md --dry-run --test "Valid Credentials"
+```
 
 **Timeout:** 60-300 seconds per test.
 
