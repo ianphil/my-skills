@@ -683,7 +683,7 @@ class TestRunner:
 
         for test in tests:
             print(
-                f"\n{self.CYAN}{test.section}{self.RESET} > {test.name} ... ",
+                f"\n{self.spec_path}:{test.line_number} {self.CYAN}{test.section}{self.RESET} > {test.name} ... ",
                 end="",
                 flush=True,
             )
