@@ -130,17 +130,17 @@ az pipelines runs list --top 5 --output table
 
 ## Reference Routing
 
-Load the appropriate reference file **when you need more detail** beyond the quick reference above:
+**Before executing any multi-step operation, you MUST read the matching reference file.** Do not rely solely on the quick reference above for anything beyond simple single commands.
 
-| User Intent | Reference File |
-|-------------|---------------|
-| Pick up work items, create branches, make PRs, monitor builds | `references/dev-flow.md` |
-| Create features/stories, hierarchy, area paths, estimation | `references/planning-flow.md` |
-| WIP, aging, throughput, cycle time, Kanban health | `references/backlog-management.md` |
-| Pipeline status, failed builds, logs, triggers | `references/pipeline-debugging.md` |
-| WIQL field names, operators, macros, quoting | `references/wiql-syntax.md` |
-| CLI command patterns, bulk ops, REST API, output formatting | `references/command-cookbook.md` |
-| Board columns, WIP limits, Kanban column queries | `resources/board-columns-api.md` |
+| User Intent | Reference File | **Read BEFORE** |
+|-------------|---------------|-----------------|
+| Pick up work items, create branches, make PRs, monitor builds | `references/dev-flow.md` | Any PR or branch workflow |
+| Create features/stories, hierarchy, area paths, estimation | `references/planning-flow.md` | Creating or linking work items |
+| WIP, aging, throughput, cycle time, Kanban health | `references/backlog-management.md` | Any backlog query or metric |
+| Pipeline status, failed builds, logs, triggers | `references/pipeline-debugging.md` | Any pipeline operation |
+| WIQL field names, operators, macros, quoting | `references/wiql-syntax.md` | Writing any WIQL query |
+| CLI command patterns, bulk ops, REST API, output formatting | `references/command-cookbook.md` | Bulk operations or REST API calls |
+| Board columns, WIP limits, Kanban column queries | `resources/board-columns-api.md` | Any board column query |
 
 ## Troubleshooting
 
