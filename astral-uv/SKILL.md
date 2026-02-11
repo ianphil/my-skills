@@ -5,10 +5,6 @@ description: >
   installing packages, managing virtual environments, running Python scripts,
   or initializing Python projects. Triggers on: pyproject.toml, requirements.txt,
   Python dependency discussions, virtual environment setup.
-license: MIT
-metadata:
-  author: Ian
-  version: "1.0"
 ---
 
 # Astral UV
