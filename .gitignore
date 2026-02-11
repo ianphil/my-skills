@@ -5,3 +5,4 @@ __pycache__/
 .claude/settings.local.json
 .ruff_cache/
 .spec-tests-failures.json
+ado/config.json

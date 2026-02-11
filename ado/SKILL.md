@@ -7,6 +7,41 @@ description: Azure DevOps CLI (az devops) for work items, pull requests, pipelin
 
 Interact with Azure DevOps using the `az devops` CLI extension. Assumes `az login` authentication and org/project defaults are configured.
 
+## Configuration
+
+On first use, check for `ado/config.json` in the skill directory. If it doesn't exist, ask the user these questions and save the answers:
+
+```json
+{
+  "organization": "https://dev.azure.com/ORG",
+  "project": "PROJECT",
+  "areaPaths": {
+    "epic": "Project\\Team",
+    "feature": "Project\\Team\\SubTeam",
+    "story": "Project\\Team\\SubTeam",
+    "task": "Project\\Team\\SubTeam",
+    "bug": "Project\\Team\\SubTeam"
+  },
+  "iterationPath": "Project\\Iteration",
+  "storyPointScale": [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+}
+```
+
+**Questions to ask if config.json is missing:**
+1. What is your ADO organization URL? (e.g., `https://dev.azure.com/myorg`)
+2. What is your project name?
+3. What area path should Epics use?
+4. What area path should Features/Stories/Tasks/Bugs use?
+5. What iteration path should work items use?
+
+Save to `ado/config.json` (gitignored — never committed).
+
+Use config values everywhere instead of hardcoded paths. Read config at the start of any operation:
+
+```powershell
+$config = Get-Content "$PSScriptRoot\..\ado\config.json" | ConvertFrom-Json
+```
+
 ## Prerequisites
 
 Verify auth and defaults before any operation:
@@ -151,13 +186,15 @@ Create features and stories with parent-child hierarchy.
 
 ### Path Conventions
 
-| Work Item Type | Area Path | Iteration Path |
-|----------------|-----------|----------------|
-| Epic | `Secure Cloud Access\Azure Encrypted Transport` | `Secure Cloud Access\Krypton` |
-| Feature | `Secure Cloud Access\Azure Encrypted Transport\SWE` | `Secure Cloud Access\Krypton` |
-| User Story | `Secure Cloud Access\Azure Encrypted Transport\SWE` | `Secure Cloud Access\Krypton` |
-| Task | `Secure Cloud Access\Azure Encrypted Transport\SWE` | `Secure Cloud Access\Krypton` |
-| Bug | `Secure Cloud Access\Azure Encrypted Transport\SWE` | `Secure Cloud Access\Krypton` |
+Paths come from `ado/config.json`. The table below shows the config keys:
+
+| Work Item Type | Area Path (config key) | Iteration Path (config key) |
+|----------------|------------------------|----------------------------|
+| Epic | `areaPaths.epic` | `iterationPath` |
+| Feature | `areaPaths.feature` | `iterationPath` |
+| User Story | `areaPaths.story` | `iterationPath` |
+| Task | `areaPaths.task` | `iterationPath` |
+| Bug | `areaPaths.bug` | `iterationPath` |
 
 ### Descriptions and Acceptance Criteria
 
@@ -181,35 +218,31 @@ az boards work-item update --id STORY_ID `
 
 ### Create a Feature Under an Epic
 
-Create the feature, then link it to the parent epic:
+Create the feature, then link it to the parent epic. Use area/iteration paths from `config.json`:
 
 ```powershell
-# Step 1: Create the feature
 $featureId = az boards work-item create `
   --type Feature `
   --title "Feature title" `
   --description "Feature description" `
-  --area "Secure Cloud Access\Azure Encrypted Transport\SWE" `
-  --iteration "Secure Cloud Access\Krypton" `
+  --area $config.areaPaths.feature `
+  --iteration $config.iterationPath `
   --query "id" -o tsv
 
-# Step 2: Link to parent epic
 az boards work-item relation add --id $featureId --relation-type parent --target-id EPIC_ID
 ```
 
 ### Create Stories Under a Feature
 
 ```powershell
-# Step 1: Create the story
 $storyId = az boards work-item create `
   --type "User Story" `
   --title "Story title" `
   --description "As a user, I want..." `
-  --area "Secure Cloud Access\Azure Encrypted Transport\SWE" `
-  --iteration "Secure Cloud Access\Krypton" `
+  --area $config.areaPaths.story `
+  --iteration $config.iterationPath `
   --query "id" -o tsv
 
-# Step 2: Link to parent feature
 az boards work-item relation add --id $storyId --relation-type parent --target-id FEATURE_ID
 ```
 
@@ -221,8 +254,8 @@ Create multiple stories under a feature by chaining create + link:
 $featureId = FEATURE_ID
 @("Story A", "Story B", "Story C") | ForEach-Object {
   $storyId = az boards work-item create --type "User Story" --title $_ `
-    --area "Secure Cloud Access\Azure Encrypted Transport\SWE" `
-    --iteration "Secure Cloud Access\Krypton" `
+    --area $config.areaPaths.story `
+    --iteration $config.iterationPath `
     --query "id" -o tsv
   az boards work-item relation add --id $storyId --relation-type parent --target-id $featureId
 }

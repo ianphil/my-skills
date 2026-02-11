@@ -4,94 +4,94 @@ A collection of reusable Claude Code plugin skills for enhanced AI-driven develo
 
 ## Available Skills
 
-### conversation-logging
+### ADO & DevOps
 
-Automatically log all Claude Code interactions to markdown files using global hooks. Track prompts, tool usage, and responses across all sessions.
+| Skill | Description |
+|-------|-------------|
+| **ado** | Azure DevOps CLI — work items, PRs, pipelines, repos, Kanban backlog management |
+| **glab** | GitLab CLI — merge requests, issues, CI/CD pipelines |
+| **commit** | Stage, commit, and push changes with conventional commit messages |
 
-**Features:**
-- Logs every prompt, tool execution, and response with detailed context
-- Organized by session in `~/.claude/conversation-logs/`
-- Enables conversation replay and context sharing
-- Includes prune script for cleaning old logs
-- Useful for debugging and auditing
+### Planning & Workflow
 
-**Example usage:**
-```bash
-# View most recent conversation
-cat $(ls -t ~/.claude/conversation-logs/*.md | head -1)
+| Skill | Description |
+|-------|-------------|
+| **planner** | Comprehensive feature planning — analysis, spec, research, design, TDD tasks |
+| **quick-plan** | Lightweight plan capture for later expansion |
+| **work-plan** | View phase breakdown, progress status, and next actions |
+| **implement** | Execute tasks following strict TDD red-green-refactor workflow |
+| **implement-agents** | Orchestrate multiple agents running /implement in parallel |
+| **autopilot** | Run all phases of a feature sequentially without manual intervention |
+| **closer** | Move finished features to the _completed/ directory |
 
-# Share context with Claude
-claude -p "@~/.claude/conversation-logs/2026-01-04-session-a1b2c3d4.md What were we working on?"
+### Context & Navigation
 
-# Search across all logs
-grep -r "bug fix" ~/.claude/conversation-logs/
+| Skill | Description |
+|-------|-------------|
+| **prime** | Load project context and understand codebase structure |
+| **prime-feat** | Load all planning artifacts for a specific feature |
 
-# Prune logs older than 14 days
-~/.claude/hooks/prune-logs.sh
-```
+### Testing
 
-### astral-uv
+| Skill | Description |
+|-------|-------------|
+| **spec-tests** | Intent-based specification tests evaluated by LLM-as-judge |
+| **tmux-tdd** | Interact with tmux-based TDD environments |
 
-Fast Python package and project management using [Astral's uv](https://github.com/astral-sh/uv).
+### Tooling
 
-**Features:**
-- Virtual environment creation (10-100x faster than pip)
-- Drop-in pip replacement with `uv pip install`
-- Project initialization with `uv init`
-- Python version management
-
-**Example usage:**
-```bash
-uv venv              # Create virtual environment
-uv add requests      # Add dependency to pyproject.toml
-uv run script.py     # Run without manual venv activation
-uv pip install -r requirements.txt  # Fast pip alternative
-```
-
-### spec-tests
-
-Intent-based specification tests evaluated by LLM-as-judge. Tests capture WHY something matters, making them cheat-proof for LLM-driven development.
-
-**Example test file** (`specs/tests/authentication.md`):
-````markdown
----
-target: src/auth.py
----
-# Authentication Tests
-
-### Valid Credentials Return Token
-
-Users need immediate access after login. Failed authentication should not
-expose whether email or password was wrong (security requirement).
-
-```
-Given valid credentials
-When authenticate() is called
-Then a JWT token is returned within 100ms
-```
-````
-
-**Running tests:**
-```bash
-python specs/tests/run_tests_claude.py specs/tests/authentication.md
-```
+| Skill | Description |
+|-------|-------------|
+| **astral-uv** | Fast Python package and project management using Astral's uv |
+| **conversation-logging** | Log all Claude Code interactions to markdown files |
+| **share-transcript** | Publish Claude Code sessions as GitHub Gists |
 
 ## Repository Structure
 
 ```
 my-skills/
+├── ado/
+│   ├── SKILL.md
+│   └── references/
 ├── astral-uv/
+│   └── SKILL.md
+├── autopilot/
+│   └── SKILL.md
+├── closer/
+│   └── SKILL.md
+├── commit/
 │   └── SKILL.md
 ├── conversation-logging/
 │   ├── SKILL.md
 │   └── scripts/
 ├── glab/
 │   └── SKILL.md
+├── implement/
+│   └── SKILL.md
+├── implement-agents/
+│   └── SKILL.md
+├── planner/
+│   ├── SKILL.md
+│   └── references/
+├── prime/
+│   └── SKILL.md
+├── prime-feat/
+│   └── SKILL.md
+├── quick-plan/
+│   └── SKILL.md
+├── share-transcript/
+│   └── SKILL.md
 ├── spec-tests/
 │   ├── SKILL.md
+│   ├── references/
 │   └── scripts/
-└── tmux-tdd/
-    └── SKILL.md
+├── tmux-tdd/
+│   └── SKILL.md
+├── work-plan/
+│   ├── SKILL.md
+│   └── references/
+└── scripts/
+    └── Sync-Skills.ps1
 ```
 
 ## License
