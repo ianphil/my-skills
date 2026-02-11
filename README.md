@@ -2,22 +2,6 @@
 
 A collection of reusable Claude Code plugin skills for enhanced AI-driven development workflows.
 
-## Installation
-
-Add this plugin to your Claude Code configuration:
-
-```bash
-claude plugins add ian-skills
-```
-
-Or add manually to your `.claude/settings.json`:
-
-```json
-{
-  "plugins": ["ian-skills@claude-code-plugins"]
-}
-```
-
 ## Available Skills
 
 ### conversation-logging
@@ -96,16 +80,18 @@ python specs/tests/run_tests_claude.py specs/tests/authentication.md
 
 ```
 my-skills/
-├── .claude-plugin/
-│   └── marketplace.json    # Plugin manifest
-└── skills/
-    ├── astral-uv/
-    │   └── SKILL.md
-    └── spec-tests/
-        ├── SKILL.md
-        └── scripts/        # Test runner and judge prompt
-            ├── run_tests_claude.py
-            └── judge_prompt.md
+├── astral-uv/
+│   └── SKILL.md
+├── conversation-logging/
+│   ├── SKILL.md
+│   └── scripts/
+├── glab/
+│   └── SKILL.md
+├── spec-tests/
+│   ├── SKILL.md
+│   └── scripts/
+└── tmux-tdd/
+    └── SKILL.md
 ```
 
 ## License
