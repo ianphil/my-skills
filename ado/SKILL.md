@@ -88,9 +88,49 @@ az boards work-item update --id ID --state Active
 az boards work-item update --id ID --state Closed
 ```
 
+## Quick Reference
+
+Essential commands. **For detailed patterns, load the appropriate reference file from the routing table below.**
+
+```powershell
+# Show a work item
+az boards work-item show --id ID --output table
+
+# Show with relations (children, parent, related)
+az boards work-item show --id ID --expand relations --output json
+
+# Get child IDs from a parent (e.g., features under an epic)
+$json = az boards work-item show --id PARENT_ID --expand relations --output json | ConvertFrom-Json
+$childIds = $json.relations | Where-Object { $_.attributes.name -eq 'Child' } | ForEach-Object { $_.url -replace '.*/', '' }
+
+# Show multiple work items (loop — there is no --ids flag)
+$childIds | ForEach-Object { az boards work-item show --id $_ --output json } | ForEach-Object { $_ | ConvertFrom-Json } | Select-Object id, @{N='Type';E={$_.fields.'System.WorkItemType'}}, @{N='Title';E={$_.fields.'System.Title'}}, @{N='State';E={$_.fields.'System.State'}} | Format-Table
+
+# Query work items with WIQL
+az boards query --wiql "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.WorkItemType] = 'User Story' AND [System.State] = 'Active'" --output table
+
+# Create a work item
+az boards work-item create --type "User Story" --title "Title" --area $config.areaPaths.story --iteration $config.iterationPath
+
+# Link child to parent (no --parent flag exists)
+az boards work-item relation add --id CHILD_ID --relation-type parent --target-id PARENT_ID
+
+# Update state
+az boards work-item update --id ID --state Active
+
+# Create a PR linked to work item
+az repos pr create --title "feat: description" --work-items ID --auto-complete true --delete-source-branch true
+
+# List active PRs
+az repos pr list --status active --output table
+
+# List pipeline runs
+az pipelines runs list --top 5 --output table
+```
+
 ## Reference Routing
 
-Load the appropriate reference file based on what the user needs:
+Load the appropriate reference file **when you need more detail** beyond the quick reference above:
 
 | User Intent | Reference File |
 |-------------|---------------|
