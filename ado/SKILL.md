@@ -113,6 +113,11 @@ Load the appropriate reference file based on what the user needs:
 | Permission denied on work items | Verify area path permissions in ADO project settings |
 | WIQL syntax error | Check quoting — double quotes outside, single quotes inside; see `references/wiql-syntax.md` |
 
+## Rules
+
+- **Always use PowerShell for all scripting and JSON processing** — never pipe to `python`, `node`, or other languages. Use `ConvertFrom-Json`, `Select-Object`, `Where-Object`, `ForEach-Object`, and other PowerShell cmdlets for all data manipulation.
+- Use `--query` with JMESPath on `az` commands to filter JSON before it reaches PowerShell when possible.
+
 ## Tips
 
 - Always use `--output table` for readable terminal output, `--output json` for parsing
