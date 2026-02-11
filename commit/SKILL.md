@@ -22,8 +22,10 @@ Stage all changes, create a commit with a descriptive message, and push to the r
 <type>: <short description>
 
 <optional body explaining why>
-
-Co-Authored-By: Claude <model>
 ```
 
 Common types: feat, fix, chore, docs, refactor, test
+
+## Rules
+
+- Do NOT add Co-Authored-By, Signed-off-by, or any trailer attributions to commits
