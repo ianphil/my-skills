@@ -157,6 +157,7 @@ Load the appropriate reference file **when you need more detail** beyond the qui
 
 - **Always use PowerShell for all scripting and JSON processing** — never pipe to `python`, `node`, or other languages. Use `ConvertFrom-Json`, `Select-Object`, `Where-Object`, `ForEach-Object`, and other PowerShell cmdlets for all data manipulation.
 - Use `--query` with JMESPath on `az` commands to filter JSON before it reaches PowerShell when possible.
+- **If a command is NOT in the quick reference above, STOP and read the appropriate reference file from the routing table before proceeding.** Never guess at `az` CLI flags or parameters — look them up first.
 
 ## Tips
 
