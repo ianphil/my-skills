@@ -1,5 +1,7 @@
 # WIQL Query Reference
 
+> Load this file when the user needs WIQL field names, operators, macros, quoting rules, or link query syntax. This is a pure language reference — for workflow-specific queries, see `backlog-management.md`.
+
 WIQL (Work Item Query Language) is used with `az boards query --wiql "..."`.
 
 ## Clause Structure
@@ -90,8 +92,8 @@ Always use bracket syntax: `[System.FieldName]`.
 
 | Operator | Field Types | Example |
 |----------|-------------|---------|
-| `UNDER` | AreaPath, IterationPath | `[System.AreaPath] UNDER 'Secure Cloud Access\Azure Encrypted Transport'` |
-| `NOT UNDER` | AreaPath, IterationPath | `[System.IterationPath] NOT UNDER 'Project\Old'` |
+| `UNDER` | AreaPath, IterationPath | `[System.AreaPath] UNDER '{AREA_PATH}'` |
+| `NOT UNDER` | AreaPath, IterationPath | `[System.IterationPath] NOT UNDER '{ITERATION_PATH}'` |
 
 `UNDER` matches the path itself **and all children** beneath it.
 
@@ -178,7 +180,7 @@ az devops invoke `
   --resource wiql `
   --http-method POST `
   --api-version 7.0 `
-  --route-parameters project="Secure Cloud Access" `
+  --route-parameters project=$config.project `
   --in-file wiql-query.json `
   --output json
 
@@ -194,7 +196,7 @@ For **flat queries** that find children without link syntax, use the simpler app
 SELECT [System.Id], [System.Title], [System.WorkItemType]
 FROM WorkItems
 WHERE [System.WorkItemType] = 'Feature'
-  AND [System.AreaPath] UNDER 'Secure Cloud Access\Azure Encrypted Transport'
+  AND [System.AreaPath] UNDER '{AREA_PATH}'
 ```
 
 Or use `az boards work-item relation show --id PARENT_ID` to list children directly.
@@ -295,7 +297,7 @@ az boards query --wiql "SELECT [System.Id], [System.Title], [System.State] `
   FROM WorkItems `
   WHERE [System.WorkItemType] = 'User Story' `
   AND [System.State] = 'Active' `
-  AND [System.AreaPath] UNDER 'Secure Cloud Access\Azure Encrypted Transport' `
+  AND [System.AreaPath] UNDER '{AREA_PATH}' `
   ORDER BY [Microsoft.VSTS.Common.Priority]" --output table
 
 # Store WIQL in a variable for complex queries
@@ -304,7 +306,7 @@ SELECT [System.Id], [System.Title], [System.State]
 FROM WorkItems
 WHERE [System.WorkItemType] = 'User Story'
   AND [System.State] IN ('New', 'Active')
-  AND [System.AreaPath] UNDER 'Secure Cloud Access\Azure Encrypted Transport\SWE'
+  AND [System.AreaPath] UNDER '{AREA_PATH}'
 ORDER BY [System.ChangedDate] DESC
 "@
 az boards query --wiql $wiql --output table

@@ -1,6 +1,6 @@
 # az devops Command Cookbook
 
-Verified command patterns for common ADO operations. Copy-paste ready.
+> Load this file for CLI command syntax not covered by domain-specific references. For dev workflow see `dev-flow.md`, for planning see `planning-flow.md`, for backlog metrics see `backlog-management.md`, for pipelines see `pipeline-debugging.md`.
 
 ## Work Items
 
@@ -8,37 +8,30 @@ Verified command patterns for common ADO operations. Copy-paste ready.
 
 ```powershell
 # User Story
-az boards work-item create \
-  --type "User Story" \
-  --title "Implement login page" \
-  --description "As a user, I want to log in so I can access my account." \
-  --assigned-to "user@example.com" \
-  --area "Secure Cloud Access\Azure Encrypted Transport\SWE" \
-  --iteration "Secure Cloud Access\Krypton"
+az boards work-item create `
+  --type "User Story" `
+  --title "Implement login page" `
+  --description "As a user, I want to log in so I can access my account." `
+  --assigned-to "user@example.com" `
+  --area $config.areaPaths.story `
+  --iteration $config.iterationPath
 
 # Bug
-az boards work-item create \
-  --type Bug \
-  --title "Login button unresponsive on mobile" \
-  --description "<p>Steps to reproduce:</p><ol><li>Open mobile browser</li><li>Tap login</li></ol>" \
+az boards work-item create `
+  --type Bug `
+  --title "Login button unresponsive on mobile" `
+  --description "<p>Steps to reproduce:</p><ol><li>Open mobile browser</li><li>Tap login</li></ol>" `
   --assigned-to "user@example.com"
 
-# Feature (create then link to parent epic)
-$featureId = az boards work-item create \
-  --type Feature \
-  --title "User Authentication" \
-  --area "Secure Cloud Access\Azure Encrypted Transport\SWE" \
-  --iteration "Secure Cloud Access\Krypton" \
-  --query "id" -o tsv
-az boards work-item relation add --id $featureId --relation-type parent --target-id EPIC_ID
-
 # Task under a Story (create then link)
-$taskId = az boards work-item create \
-  --type Task \
-  --title "Write unit tests for auth module" \
+$taskId = az boards work-item create `
+  --type Task `
+  --title "Write unit tests for auth module" `
   --query "id" -o tsv
 az boards work-item relation add --id $taskId --relation-type parent --target-id STORY_ID
 ```
+
+For feature/story hierarchy creation, see `references/planning-flow.md`.
 
 ### Parent-Child Linking
 
@@ -78,20 +71,20 @@ az boards work-item update --id 12345 --state Closed
 az boards work-item update --id 12345 --assigned-to "other@example.com"
 
 # Update title and description
-az boards work-item update --id 12345 \
-  --title "Updated title" \
+az boards work-item update --id 12345 `
+  --title "Updated title" `
   --description "Updated description"
 
 # Add tags
 az boards work-item update --id 12345 --fields "System.Tags=api,backend,priority"
 
 # Move to different area/iteration
-az boards work-item update --id 12345 \
-  --area "Project\NewTeam" \
-  --iteration "Project\Sprint 2"
+az boards work-item update --id 12345 `
+  --area $config.areaPaths.story `
+  --iteration $config.iterationPath
 
 # Update custom fields using --fields
-az boards work-item update --id 12345 \
+az boards work-item update --id 12345 `
   --fields "Microsoft.VSTS.Scheduling.StoryPoints=5"
 ```
 
@@ -107,23 +100,9 @@ az boards work-item delete --id 12345 --destroy --yes
 
 ### Bulk Operations (PowerShell)
 
-```powershell
-# Bulk create stories under a feature
-$featureId = 12345
-$stories = @(
-  "Setup authentication middleware",
-  "Create login endpoint",
-  "Create logout endpoint",
-  "Add token refresh logic"
-)
-$stories | ForEach-Object {
-  $storyId = az boards work-item create --type "User Story" --title $_ `
-    --area "Secure Cloud Access\Azure Encrypted Transport\SWE" `
-    --iteration "Secure Cloud Access\Krypton" `
-    --query "id" -o tsv
-  az boards work-item relation add --id $storyId --relation-type parent --target-id $featureId
-}
+For bulk story creation under a feature, see `references/planning-flow.md`.
 
+```powershell
 # Bulk close items by query
 $ids = az boards query --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.State] = 'Resolved'" --output json | ConvertFrom-Json
 $ids | ForEach-Object { az boards work-item update --id $_.id --state Closed }
@@ -140,25 +119,25 @@ $ids | ForEach-Object { az boards work-item update --id $_.id --state Closed }
 
 ```powershell
 # Basic PR
-az repos pr create \
-  --title "feat: add user authentication" \
+az repos pr create `
+  --title "feat: add user authentication" `
   --description "Implements OAuth2 login flow. Resolves AB#12345"
 
 # PR with full options
-az repos pr create \
-  --title "feat: add user authentication" \
-  --description "Implements OAuth2 login flow" \
-  --source-branch feature/12345-auth \
-  --target-branch main \
-  --work-items 12345 12346 \
-  --reviewers "reviewer@example.com" \
-  --auto-complete true \
-  --delete-source-branch true \
+az repos pr create `
+  --title "feat: add user authentication" `
+  --description "Implements OAuth2 login flow" `
+  --source-branch feature/12345-auth `
+  --target-branch main `
+  --work-items 12345 12346 `
+  --reviewers "reviewer@example.com" `
+  --auto-complete true `
+  --delete-source-branch true `
   --squash true
 
 # Draft PR
-az repos pr create \
-  --title "WIP: refactoring auth module" \
+az repos pr create `
+  --title "WIP: refactoring auth module" `
   --draft
 ```
 
@@ -205,12 +184,12 @@ az repos pr update --id 42 --status abandoned
 az repos pr reviewer add --id 42 --reviewers "reviewer@example.com"
 
 # Add comment (use REST via az devops invoke)
-az devops invoke \
-  --area git \
-  --resource pullRequestThreads \
-  --route-parameters project=PROJECT repositoryId=REPO pullRequestId=42 \
-  --api-version 7.0 \
-  --http-method POST \
+az devops invoke `
+  --area git `
+  --resource pullRequestThreads `
+  --route-parameters project=$config.project repositoryId=REPO pullRequestId=42 `
+  --api-version 7.0 `
+  --http-method POST `
   --in-file comment.json
 ```
 
@@ -227,60 +206,6 @@ az repos pr work-item add --id 42 --work-items 12345
 az repos pr work-item list --id 42 --output table
 ```
 
-## Pipelines
-
-### List and View
-
-```powershell
-# List all pipelines (get pipeline IDs from here)
-az pipelines list --output table
-
-# List runs for a specific pipeline (use --pipeline-ids, not --pipeline-name)
-az pipelines runs list --pipeline-ids PIPELINE_ID --top 10 --output table
-
-# List only failed runs (use --result, not --status for outcomes)
-az pipelines runs list --pipeline-ids PIPELINE_ID --result failed --top 5 --output table
-
-# List runs for a branch
-az pipelines runs list --branch refs/heads/main --top 5 --output table
-
-# Show run details
-az pipelines runs show --id RUN_ID --output table
-```
-
-### Trigger
-
-```powershell
-# Run default branch
-az pipelines run --name "CI Build"
-
-# Run specific branch
-az pipelines run --name "CI Build" --branch feature/auth
-
-# Run with variables
-az pipelines run --name "CI Build" --variables "debug=true" "verbosity=diagnostic"
-```
-
-### Logs and Artifacts
-
-```powershell
-# Get logs via REST (no direct CLI command for pipeline logs)
-az devops invoke \
-  --area pipelines \
-  --resource logs \
-  --route-parameters project=PROJECT pipelineId=PIPELINE_ID runId=RUN_ID \
-  --api-version 7.0
-
-# Download artifacts
-az pipelines runs artifact download \
-  --run-id RUN_ID \
-  --artifact-name "drop" \
-  --path ./artifacts
-
-# View pipeline YAML definition
-az pipelines show --name "CI Build" --output yaml
-```
-
 ## Repos
 
 ### Branch Management
@@ -290,15 +215,15 @@ az pipelines show --name "CI Build" --output yaml
 az repos ref list --repository REPO --filter heads/ --output table
 
 # Create branch from main
-az repos ref create \
-  --name "refs/heads/feature/new-branch" \
-  --repository REPO \
+az repos ref create `
+  --name "refs/heads/feature/new-branch" `
+  --repository REPO `
   --object-id $(az repos ref list --repository REPO --filter heads/main --query "[0].objectId" -o tsv)
 
 # Delete branch
-az repos ref delete \
-  --name "refs/heads/feature/old-branch" \
-  --repository REPO \
+az repos ref delete `
+  --name "refs/heads/feature/old-branch" `
+  --repository REPO `
   --object-id COMMIT_SHA
 
 # Lock/unlock branch
@@ -313,22 +238,22 @@ az repos ref unlock --name "refs/heads/release/1.0" --repository REPO
 az repos policy list --branch main --repository-id REPO_ID --output table
 
 # Require minimum reviewers
-az repos policy approver-count create \
-  --branch main \
-  --repository-id REPO_ID \
-  --minimum-approver-count 2 \
-  --creator-vote-counts false \
-  --enabled true \
+az repos policy approver-count create `
+  --branch main `
+  --repository-id REPO_ID `
+  --minimum-approver-count 2 `
+  --creator-vote-counts false `
+  --enabled true `
   --blocking true
 
 # Require build validation
-az repos policy build create \
-  --branch main \
-  --repository-id REPO_ID \
-  --build-definition-id PIPELINE_ID \
-  --display-name "CI Must Pass" \
-  --enabled true \
-  --blocking true \
+az repos policy build create `
+  --branch main `
+  --repository-id REPO_ID `
+  --build-definition-id PIPELINE_ID `
+  --display-name "CI Must Pass" `
+  --enabled true `
+  --blocking true `
   --queue-on-source-update-only true
 ```
 
@@ -338,26 +263,26 @@ For operations not covered by CLI commands:
 
 ```powershell
 # Generic GET
-az devops invoke \
-  --area wit \
-  --resource workitems \
-  --route-parameters project=PROJECT id=12345 \
+az devops invoke `
+  --area wit `
+  --resource workitems `
+  --route-parameters project=$config.project id=12345 `
   --api-version 7.0
 
 # Generic POST with body from file
-az devops invoke \
-  --area wit \
-  --resource workitems \
-  --route-parameters project=PROJECT \
-  --api-version 7.0 \
-  --http-method POST \
+az devops invoke `
+  --area wit `
+  --resource workitems `
+  --route-parameters project=$config.project `
+  --api-version 7.0 `
+  --http-method POST `
   --in-file body.json
 
 # Get work item revisions (for cycle time)
-az devops invoke \
-  --area wit \
-  --resource revisions \
-  --route-parameters project=PROJECT workItemId=12345 \
+az devops invoke `
+  --area wit `
+  --resource revisions `
+  --route-parameters project=$config.project workItemId=12345 `
   --api-version 7.0
 ```
 
@@ -374,7 +299,7 @@ az boards query --wiql "..." --output json
 az boards work-item show --id 12345 --query "fields.\"System.Title\"" -o tsv
 
 # JMESPath filtering
-az boards query --wiql "..." --output json \
+az boards query --wiql "..." --output json `
   --query "[].fields.{Id: 'System.Id', Title: 'System.Title', State: 'System.State'}"
 
 # Pipe JSON to PowerShell
