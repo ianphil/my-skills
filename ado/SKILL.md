@@ -1,6 +1,6 @@
 ---
 name: ado
-description: "Azure DevOps CLI for work items, PRs, pipelines, and backlog management. Triggers on: ADO, azure devops, work item, backlog, az boards, az repos, az pipelines."
+description: "Azure DevOps CLI (az ado). Use for work items, PRs, pipelines, and backlog management. Triggers on: az ado, ADO, azure devops, work item, backlog, az boards, az repos, az pipelines."
 ---
 
 # ado — Azure DevOps CLI
