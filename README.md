@@ -11,6 +11,7 @@ A collection of reusable Claude Code plugin skills for enhanced AI-driven develo
 | **ado** | Azure DevOps CLI — work items, PRs, pipelines, repos, Kanban backlog management |
 | **glab** | GitLab CLI — merge requests, issues, CI/CD pipelines |
 | **commit** | Stage, commit, and push changes with conventional commit messages |
+| **ainotes** | Consolidate agent observations into curated per-repo knowledge |
 
 ### Planning & Workflow
 
@@ -53,6 +54,8 @@ my-skills/
 ├── ado/
 │   ├── SKILL.md
 │   └── references/
+├── ainotes/
+│   └── SKILL.md
 ├── astral-uv/
 │   └── SKILL.md
 ├── autopilot/

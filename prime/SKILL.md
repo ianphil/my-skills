@@ -10,7 +10,8 @@ Load project context by reading core documentation and listing the file structur
 ## Workflow
 
 1. Read `README.md` for project overview
-2. Run `git ls-files` to see the file structure
-3. Note key directories and entry points
+2. If `.ainotes/summary.md` exists, read it for accumulated agent context
+3. Run `git ls-files` to see the file structure
+4. Note key directories and entry points
 
 No summary needed - context is now loaded for subsequent work.
