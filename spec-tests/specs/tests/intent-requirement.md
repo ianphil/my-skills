@@ -4,8 +4,6 @@ target:
   - scripts/run_tests_claude.py
   - scripts/run_tests_opencode.py
   - scripts/run_tests_codex.py
-  - references/multi-target.md
-  - references/examples.md
 ---
 # Intent Requirement Specification
 
@@ -46,8 +44,8 @@ must agree on an error code), users need to write one test that covers all files
 Without this syntax, they'd duplicate the same test for each target.
 
 ```
-Given the SKILL.md and references/multi-target.md files
-Then they document how to write tests that apply to multiple files using:
+Given the SKILL.md file
+Then it documents how to write tests that apply to multiple files using:
   - Multi-file Given clause: "Given file1 and file2"
   - Single assertion that applies to all listed files
   - Guidance on when to use multi-file vs separate tests
@@ -190,8 +188,8 @@ Technical details belong in the assertion itself. Intent answers: "What breaks f
 the user if this test fails?"
 
 ```
-Given the SKILL.md and references/examples.md files
-Then they document that intent should be business-focused, explaining:
+Given the SKILL.md file
+Then it documents that intent should be business-focused, explaining:
   - Intent answers "what breaks for the user" not "how it's implemented"
   - Technical details belong in assertions, not intent
   - Good example: "Users perceive delays over 50ms as laggy on every keystroke"
@@ -206,8 +204,8 @@ The same intent that applies to the Python version applies to the Rust version.
 Only the assertion syntax changes.
 
 ```
-Given the SKILL.md and references/examples.md files
-Then they document that when porting tests between languages:
+Given the SKILL.md file
+Then it documents that when porting tests between languages:
   - Intent statement is preserved (verbatim or equivalent)
   - Only assertion syntax changes for the target language
   - Business reasoning remains the same regardless of implementation language

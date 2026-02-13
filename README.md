@@ -86,7 +86,6 @@ my-skills/
 │   └── SKILL.md
 ├── spec-tests/
 │   ├── SKILL.md
-│   ├── references/
 │   └── scripts/
 ├── tmux-tdd/
 │   └── SKILL.md

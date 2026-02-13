@@ -4,7 +4,6 @@ target:
   - scripts/run_tests_claude.py
   - scripts/run_tests_opencode.py
   - scripts/run_tests_codex.py
-  - references/examples.md
 ---
 # Skill Structure Requirements
 
@@ -147,8 +146,8 @@ failures become ambiguous—you don't know which behavior broke. This also makes
 tests harder to understand and maintain.
 
 ```
-Given the SKILL.md and references/examples.md files
-Then they document that each test should cover one behavior
+Given the SKILL.md file
+Then it documents that each test should cover one behavior
   (may be phrased as "one behavior per test" or "single behavior" or similar)
 And explain why: multi-behavior tests create ambiguous failures
 Because users need to understand both the rule and the reasoning
