@@ -98,9 +98,7 @@ git add -A
 git commit -m "chore: close feature {NNN}-{slug}
 
 - Move backlog/plans/{NNN}-{slug}/ to backlog/plans/_completed/
-- Update documentation references
-
-Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
+- Update documentation references"
 ```
 
 ## Step 6: Summary
