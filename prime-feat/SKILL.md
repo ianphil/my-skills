@@ -31,9 +31,10 @@ Load all planning artifacts and context for feature {{feature_number}}.
    - Then `data-model.md`, `tasks.md`, `research.md`
    - Finally list and read files in `contracts/` directory
 5. Read `specs/tests/{feature-id}.md` if it exists
-6. Run `git status` and `git branch --show-current` to check current branch
-7. If not on the feature branch, suggest: `git checkout feature/{feature-id}`
-8. Analyze `tasks.md` and summarize:
+6. If `.ainotes/summary.md` exists, read it for accumulated agent context
+7. Run `git status` and `git branch --show-current` to check current branch
+8. If not on the feature branch, suggest: `git checkout feature/{feature-id}`
+9. Analyze `tasks.md` and summarize:
    - Total task count
    - Completed count (checked boxes)
    - Current phase based on task completion

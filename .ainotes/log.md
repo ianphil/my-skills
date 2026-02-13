@@ -5,3 +5,4 @@
 - conventions: closer/SKILL.md had a Co-Authored-By trailer contradicting the commit skill's no-attribution rule
 - skills: SKILL.md files use YAML frontmatter (name, description) — description doubles as the trigger phrase list
 - skills: phase-based structure with explicit mandatory/skip language is more effective than flat numbered lists for agent compliance
+- skills: prime and prime-feat should both read .ainotes/summary.md — keeps agent context consistent whether loading project-level or feature-level context
