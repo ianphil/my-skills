@@ -6,3 +6,4 @@
 - skills: SKILL.md files use YAML frontmatter (name, description) — description doubles as the trigger phrase list
 - skills: phase-based structure with explicit mandatory/skip language is more effective than flat numbered lists for agent compliance
 - skills: prime and prime-feat should both read .ainotes/summary.md — keeps agent context consistent whether loading project-level or feature-level context
+- skills: daily-report is a custom skill (no scripts/) that orchestrates WorkIQ MCP + local file reads — pattern for skills that compose external tools with local filesystem
