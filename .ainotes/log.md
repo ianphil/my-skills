@@ -13,3 +13,4 @@
 - playwright-cli: PLAYWRIGHT_MCP_EXTENSION_TOKEN loaded from ~/.copilot/skills/.env at session start; .env is gitignored
 - playwright-cli: upstream repo is microsoft/playwright-cli (CLI) vs microsoft/playwright-mcp (MCP server) — CLI is preferred for coding agents due to token efficiency
 - skills: allowed-tools frontmatter supports glob patterns like Bash(playwright-cli:*) to whitelist all subcommands of a CLI tool
+- conventions: skills should proactively fix environment issues (e.g., add gitignore entries) and inform the user, rather than just reminding the user to do it themselves

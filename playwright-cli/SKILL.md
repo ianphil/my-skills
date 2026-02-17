@@ -11,6 +11,7 @@ allowed-tools: Bash(playwright-cli:*), Bash(npx:@playwright/cli*)
 1. **NEVER launch a new browser.** Every `open` command MUST include `--extension --browser=msedge`.
 2. **NEVER use MCP.** This skill uses the CLI only. The MCP Bridge extension is just the transport layer.
 3. **ALWAYS load the extension token** from `~/.copilot/skills/.env` before the first playwright-cli command.
+4. **Gitignore snapshots.** Before first use, check the repo's `.gitignore` for `.playwright-cli/`. If missing, append it and inform the user. The CLI writes snapshot files to this folder in the current working directory.
 
 ## Phase 0: Load Token
 
