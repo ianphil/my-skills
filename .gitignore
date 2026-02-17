@@ -6,3 +6,4 @@ __pycache__/
 .ruff_cache/
 .spec-tests-failures.json
 ado/config.json
+.env
