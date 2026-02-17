@@ -13,7 +13,7 @@ allowed-tools: Bash(playwright-cli:*), Bash(npx:@playwright/cli*)
 3. **ALWAYS load the extension token** from `~/.copilot/skills/.env` before the first playwright-cli command.
 4. **Gitignore snapshots.** Before first use, check the repo's `.gitignore` for `.playwright-cli/`. If missing, append it and inform the user. The CLI writes snapshot files to this folder in the current working directory.
 
-## Phase 0: Load Token
+## Phase 0: Load Token and Config
 
 Before running any playwright-cli command, load the extension token:
 
@@ -36,6 +36,17 @@ Verify the token is set:
 ```powershell
 if (-not $env:PLAYWRIGHT_MCP_EXTENSION_TOKEN) {
     Write-Error "PLAYWRIGHT_MCP_EXTENSION_TOKEN not set. Check ~/.copilot/skills/.env"
+}
+```
+
+### Internal Sites Config
+
+Load `playwright-cli/config.json` (gitignored) which maps internal site URLs to keywords. When the user's request matches keywords for a site, navigate there automatically.
+
+```powershell
+$configFile = Join-Path $HOME ".copilot" "skills" "playwright-cli" "config.json"
+if (Test-Path $configFile) {
+    $sites = (Get-Content $configFile -Raw | ConvertFrom-Json).sites
 }
 ```
 

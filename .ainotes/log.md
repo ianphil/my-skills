@@ -14,3 +14,5 @@
 - playwright-cli: upstream repo is microsoft/playwright-cli (CLI) vs microsoft/playwright-mcp (MCP server) — CLI is preferred for coding agents due to token efficiency
 - skills: allowed-tools frontmatter supports glob patterns like Bash(playwright-cli:*) to whitelist all subcommands of a CLI tool
 - conventions: skills should proactively fix environment issues (e.g., add gitignore entries) and inform the user, rather than just reminding the user to do it themselves
+- playwright-cli: config.json (gitignored) holds internal site URLs with keyword triggers — skill auto-navigates when user's request matches keywords
+- playwright-cli: CLI uses `open [url]` not `goto` for navigation; `goto` is not a valid command despite upstream SKILL.md listing it
