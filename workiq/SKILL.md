@@ -1,7 +1,6 @@
 ---
 name: workiq
 description: This skill should be used when the user asks to "install WorkIQ", "set up WorkIQ", "query my emails with AI", "connect AI to Microsoft 365", "query my meetings or documents", "use workiq ask", or wants to use natural language to search Microsoft 365 data (emails, meetings, Teams messages, documents, people) from an AI assistant.
-version: 0.1.0
 ---
 
 # Microsoft Work IQ
