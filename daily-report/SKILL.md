@@ -28,19 +28,23 @@ Use this skill when the user asks for their "daily report", "morning briefing", 
 
 When the user requests their daily report, perform the following steps:
 
+### Step 0: Load the WorkIQ Skill
+
+**Explicitly invoke `skill(workiq)` before any Microsoft 365 queries.** All M365 data (emails, calendar) must be retrieved using the WorkIQ CLI via that skill. Do not use any MCP tools for M365 data.
+
 ### Step 1: Gather Important Emails
 
-Use the `workiq-ask_work_iq` tool to query for recent important emails from key contacts.
+Using the `workiq` skill, run the following CLI command to query for recent important emails from key contacts:
 
-Query for emails from these priority contacts:
+```bash
+workiq ask -q "What recent emails do I have from Kent Klinzman, Michael Roberson, Andrew Edwards, or Douglas Phillips in the last 24 hours? Include both inbox and CC'd emails."
+```
+
+Priority contacts:
 - Kent Klinzman
 - Michael Roberson
 - Andrew Edwards
 - Douglas Phillips
-
-Ask WorkIQ questions like:
-- "What recent emails do I have from Kent Klinzman, Michael Roberson, Andrew Edwards, or Douglas Phillips?"
-- "Are there any important emails in my inbox from Kent Klinzman, Michael Roberson, Andrew Edwards, or Douglas Phillips in the last 24 hours?"
 
 Focus on:
 - Inbox folder
@@ -48,11 +52,11 @@ Focus on:
 
 ### Step 2: Get Today's Calendar
 
-Use the `workiq-ask_work_iq` tool to query today's calendar events.
+Using the `workiq` skill, run:
 
-Ask WorkIQ:
-- "What meetings do I have scheduled for today?"
-- "What's on my calendar today?"
+```bash
+workiq ask -q "What meetings do I have scheduled for today?"
+```
 
 ### Step 3: Gather Next Actions
 

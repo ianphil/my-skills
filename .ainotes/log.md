@@ -1,5 +1,9 @@
 # AI Notes — Log
 
+## 2026-02-18
+- skills: workiq skill uses CLI only (`workiq ask -q`) — no MCP, no VS Code integration, no npx mcp; single SKILL.md with no references/ subdirectory
+- skills: daily-report must explicitly invoke `skill(workiq)` (Step 0) before any M365 queries; replaced `workiq-ask_work_iq` MCP tool with CLI commands
+
 ## 2026-02-13
 - conventions: no Co-Authored-By or trailer attributions on commits — enforced in commit/SKILL.md rules
 - conventions: closer/SKILL.md had a Co-Authored-By trailer contradicting the commit skill's no-attribution rule
