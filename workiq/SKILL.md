@@ -154,6 +154,14 @@ workiq ask
 # > Were any of these issues flagged as blocking the rollout?
 ```
 
+## Query Tips
+
+When calling `workiq ask -q` from other skills or scripts, append these instructions to your query for tighter output:
+
+- **For concise responses:** Add `"Be concise. Bullet points only. No follow-up offers."` at the end of your query. WorkIQ's default responses are conversational and verbose — this suffix reduces output by ~60%.
+- **For time-scoped queries:** Use explicit dates (`"messages sent since 2026-02-25"`) rather than relative phrases (`"last 24 hours"`). Some Teams thread types don't reliably support relative time filtering.
+- **For structured extraction:** Ask for specific fields: `"List sender, subject, and action needed"` produces cleaner output than open-ended `"Summarize my emails"`.
+
 ## Security and Privacy
 
 Work IQ inherits Microsoft 365 Copilot's data protections:
