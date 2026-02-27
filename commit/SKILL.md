@@ -29,7 +29,7 @@ If `.ainotes/` does not exist in the repo root:
 mkdir .ainotes
 ```
 
-Create `.ainotes/summary.md`:
+Create `.ainotes/memory.md`:
 
 ```markdown
 # AI Notes — <project name>
@@ -82,7 +82,8 @@ Match the existing commit style. Stage files explicitly:
 ```powershell
 git add <changed files>
 git add .ainotes/log.md          # always include if modified
-git add .ainotes/summary.md      # include if created
+git add .ainotes/memory.md      # include if created
+git add .ainotes/rules.md       # include if created or modified
 ```
 
 Prefer `git add <file>` over `git add -A`.
