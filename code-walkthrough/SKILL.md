@@ -66,7 +66,18 @@ Before writing anything, read the target code thoroughly:
 
 The teaching sequence matters. Build understanding incrementally — don't reference concepts before they're introduced.
 
-### 3. Initialize the document
+### 3. Check for existing walkthrough
+
+Before creating or editing anything, check if the output file already exists:
+
+```bash
+# If the file exists, verify it FIRST
+showboat verify <output-path>
+```
+
+**If the file exists:** `showboat verify` re-runs every code block and diffs against recorded output. This tells you exactly which snippets have drifted — stale line ranges, renamed functions, deleted files. **Use the verify output as your editing guide.** Only update what's changed; don't rewrite sections that still match. After fixes, run verify again to confirm.
+
+**If the file doesn't exist:** Initialize a new document:
 
 ```bash
 showboat init <output-path> "<Title> — Walkthrough"
@@ -118,14 +129,14 @@ Keep code blocks focused — 10-30 lines is ideal. Don't dump an entire 200-line
 
 End with a brief section summarizing the overall shape — how many files, what the architecture looks like at a glance, what's deliberate about the design. This gives the reader a mental model to hold onto.
 
-### 7. Verify (optional)
+### 7. Verify
 
-If the user wants to confirm the walkthrough still matches the code:
+Always run verify after completing edits or additions:
 ```bash
 showboat verify <output-path>
 ```
 
-This re-executes every code block and diffs against the recorded output.
+This re-executes every code block and diffs against the recorded output. For new walkthroughs, it confirms everything was captured correctly. For updates, it confirms your fixes resolved all drift. **Don't consider the walkthrough done until verify passes clean.**
 
 ## Key Constraints
 
