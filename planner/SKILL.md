@@ -94,28 +94,11 @@ Create three artifacts:
 - API schemas
 - Configuration schemas
 
-### Phase 5: Test Design
-
-**5a. Spec Tests (`specs/tests/{NNN}-{slug}.md`)**
-
-**CRITICAL**: Before writing spec tests, load the spec-tests skill:
-```
-Skill(skill="all-skills:spec-tests")
-```
-
-See `references/spec-tests-guide.md` for detailed writing guidance.
-
-Key principles:
-- Tests verified by reading code, not executing
-- Intent explains WHY users/business care
-- Assertions reference specific files and observable structures
-
-**5b. Task Breakdown (`tasks.md`)**
+### Phase 5: Task Breakdown (`tasks.md`)
 
 Organize tasks by phase with TDD workflow:
 - `[TEST]` tasks: Write failing tests first
 - `[IMPL]` tasks: Implement to pass tests
-- `[SPEC]` tasks: Run spec tests at phase boundaries
 
 Include dependency diagram and task summary table.
 
@@ -130,7 +113,7 @@ Include dependency diagram and task summary table.
 3. **Phase 2**: Create `spec.md` - define requirements
 4. **Phase 3**: Create `research.md` - validate against external specs (if applicable)
 5. **Phase 4**: Create `plan.md`, `data-model.md`, `contracts/` - design
-6. **Phase 5**: Create `specs/tests/{NNN}-{slug}.md` and `tasks.md` - test design
+6. **Phase 5**: Create `tasks.md` - task breakdown
 7. **Cleanup**: Remove the corresponding quick plan from `backlog/plans/` (e.g., `backlog/plans/YYYYMMDD-{slug}.md`) since the full planning artifacts supersede it
 
 ### Interactive Planning
@@ -159,7 +142,6 @@ Created Artifacts:
 │   ├── tasks.md         ✅
 │   └── contracts/
 │       └── README.md    ✅
-└── specs/tests/{NNN}-{slug}.md  ✅
 
 Cleaned Up:
 - Removed quick plan: backlog/plans/YYYYMMDD-{slug}.md  🗑️
@@ -179,7 +161,6 @@ Next Steps:
 
 For detailed templates and guidance, consult:
 - **`references/templates.md`** - Full templates for all planning artifacts
-- **`references/spec-tests-guide.md`** - Detailed spec test writing guidance
 
 ### External References
 

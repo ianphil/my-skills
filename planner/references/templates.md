@@ -344,47 +344,7 @@ Create individual contract files as needed (e.g., `grpc-api.md`, `config.schema.
 
 ---
 
-## Phase 5a: Spec Tests (`specs/tests/{NNN}-{slug}.md`)
-
-**Goal**: Intent-based acceptance tests evaluated by LLM-as-judge.
-
-```markdown
----
-target:
-  - src/path/to/file1.rs
-  - src/path/to/file2.rs
----
-
-# {Feature} Spec Tests
-
-Brief description of what these tests validate.
-
-## {Requirement Group}
-
-### {Test Name}
-
-{Intent: WHY users/business care. What breaks if this doesn't work?}
-
-```
-Given the {specific file path}
-When examining {struct/function/impl}
-Then {observable code property}
-And {additional verifiable detail}
-```
-```
-
-### Spec Test Principles
-
-| Principle | Do | Don't |
-|-----------|-----|-------|
-| Intent | Explain WHY users care | Describe technical implementation |
-| Assertions | Reference specific files | Describe runtime behavior |
-| Scope | Test observable code structure | Test method return values |
-| Targets | Only include files tests examine | List every related file |
-
----
-
-## Phase 5b: Task Breakdown (`tasks.md`)
+## Phase 5: Task Breakdown (`tasks.md`)
 
 Create `backlog/plans/{NNN}-{slug}/tasks.md`:
 
@@ -398,16 +358,10 @@ All implementation follows strict Red-Green-Refactor:
 2. **GREEN**: Write minimal code to pass test
 3. **REFACTOR**: Clean up while keeping tests green
 
-### Two Test Layers
+### Test Layer
 | Layer | Purpose | When to Run |
 |-------|---------|-------------|
 | **Unit Tests** | Implementation TDD (Red-Green-Refactor) | During implementation |
-| **Spec Tests** | Intent-based acceptance validation | After all phases complete |
-
-## User Story Mapping
-| Story | spec.md Reference | Spec Tests |
-|-------|-------------------|------------|
-| US1 | Section reference | Test names |
 
 ## Dependencies
 ```
@@ -440,6 +394,4 @@ After all implementation phases are complete:
 
 - [ ] `make check` passes
 - [ ] `make test` passes
-- [ ] Run spec tests with `/spec-tests` skill using `specs/tests/{NNN}-{slug}.md`
-- [ ] All spec tests pass → feature complete
 ```
